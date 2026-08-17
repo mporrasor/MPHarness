@@ -47,8 +47,32 @@ harness check
 ```
 
 ### 5. Updating the Harness
-As the central MPHarness repository evolves with new rules and templates, you can pull these updates into your active projects **without overwriting your custom rules**:
+As the central MPHarness repository evolves, updates can be pulled directly from the GitHub repository into your active projects **without overwriting your custom rules**:
 ```bash
 harness update
 ```
-This command safely downloads the updated templates into a `.harness/updates/` directory. It will then provide you with a prompt to give to your AI Agent, instructing it to intelligently merge the new general directives into your active specs while preserving your project-specific logic.
+*(Note: If you run this manually, it downloads to `.harness/updates/`. However, your AI Agent is instructed to run `harness update --auto` automatically in the background when it starts. If updates are found, it will ask for your permission to merge them safely.)*
+
+## 6. Workflow Scenarios
+
+Here is how to use the harness in practice:
+
+### Scenario A: Starting a 100% New Project
+**Goal: Extract ideas and plan before coding.**
+1. Create an empty folder (e.g., `mkdir MyNewApp` and `cd MyNewApp`).
+2. Run `harness init`. The CLI will create the `/docs` folder and all markdown templates.
+3. Save any ideas, raw requirements, or sketches inside `/docs`.
+4. Open your AI IDE and say: *"I have an idea for an app, please check `/docs` and let's start."*
+5. **AI Behavior:** The agent will read `CONSTITUTION.md` and `AGENTS.md`, see it's a new project, and enter an interview mode to build `SPECIFICATION.md` and `ARCHITECTURE.md`. It will not write code until you approve the plan.
+
+### Scenario B: Working on an Ongoing Project (WITH the Harness)
+**Goal: Resume work and check for harness updates safely.**
+1. Open the project in your AI IDE and ask for your next feature (e.g., *"Add the payment gateway."*).
+2. **AI Behavior (Startup Audit & Update):** Before doing anything, the agent will run `harness update --auto` to check for new rules on GitHub. If updates exist, it will ask: *"There are harness updates available. Do you want to apply them now?"*. If approved, it merges them, runs a verification test, and performs a rollback if it fails.
+3. It then reads `TASKS.md` and the Git history to understand the current state before addressing your request.
+
+### Scenario C: Working on an Ongoing Project (WITHOUT the Harness)
+**Goal: Tame a chaotic or legacy codebase.**
+1. Open your terminal in the existing project folder and run `harness init`. (This won't alter your code).
+2. Open your AI IDE and say: *"I just injected the AI harness. Please audit this project and fill in the specifications."*
+3. **AI Behavior:** The agent reads the constitution, reverse-engineers your existing codebase to identify the stack, and fills out `ARCHITECTURE.md` and `SPECIFICATION.md`. From that moment on, the project is governed by the strict harness rules.
