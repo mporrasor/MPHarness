@@ -92,35 +92,63 @@ def update(dir, auto):
     updates_found = False
     
     import filecmp
+    import urllib.request
+    import tempfile
     
-    # Check templates
-    for file in TEMPLATE_DIR.iterdir():
-        if file.is_file():
-            dest = target_dir / file.name
-            if not dest.exists():
-                # If it doesn't exist at all, just copy it directly
-                shutil.copy(file, dest)
-                console.print(f"[green]Added missing template:[/green] {dest.name}")
+    GITHUB_RAW_URL = "https://raw.githubusercontent.com/mporrasor/MPHarness/main/src/harness_cli/templates/spec-driven-project/"
+    template_files = [f.name for f in TEMPLATE_DIR.iterdir() if f.is_file()]
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        use_remote = True
+        
+        console.print("[cyan]Checking for updates from GitHub...[/cyan]")
+        
+        try:
+            if template_files:
+                urllib.request.urlopen(GITHUB_RAW_URL + template_files[0], timeout=5)
+        except Exception as e:
+            use_remote = False
+            console.print(f"[yellow]Could not reach GitHub. Falling back to local templates.[/yellow]")
+            
+        for filename in template_files:
+            local_template_path = TEMPLATE_DIR / filename
+            
+            if use_remote:
+                remote_url = GITHUB_RAW_URL + filename
+                temp_file_path = temp_dir_path / filename
+                try:
+                    urllib.request.urlretrieve(remote_url, temp_file_path)
+                    source_file = temp_file_path
+                except Exception as e:
+                    console.print(f"[yellow]Warning: Failed to download {filename} from GitHub. Using local version.[/yellow]")
+                    source_file = local_template_path
             else:
-                # Compare to see if there is an actual update
-                if not filecmp.cmp(file, dest, shallow=False):
+                source_file = local_template_path
+
+            dest = target_dir / filename
+            if not dest.exists():
+                shutil.copy(source_file, dest)
+                console.print(f"[green]Added missing template:[/green] {filename}")
+            else:
+                if not filecmp.cmp(source_file, dest, shallow=False):
                     if auto:
                         choice = 'K'
                     else:
-                        console.print(f"\n[bold yellow]Attention:[/bold yellow] A new version of [bold]{dest.name}[/bold] is available, but your local file may have custom changes.")
+                        console.print(f"\n[bold yellow]Attention:[/bold yellow] A new version of [bold]{filename}[/bold] is available, but your local file may have custom changes.")
                         choice = click.prompt("Do you want to (O)verwrite your local file or (K)eep it and prepare a merge?", type=click.Choice(['O', 'K'], case_sensitive=False), default='K')
                     
                     if choice.upper() == 'O':
-                        shutil.copy(file, dest)
-                        console.print(f"[red]Overwrote local file:[/red] {dest.name}")
+                        shutil.copy(source_file, dest)
+                        console.print(f"[red]Overwrote local file:[/red] {filename}")
                     else:
                         if not updates_dir.exists():
                             updates_dir.mkdir(parents=True)
                         
-                        update_dest = updates_dir / file.name
-                        shutil.copy(file, update_dest)
+                        update_dest = updates_dir / filename
+                        shutil.copy(source_file, update_dest)
                         updates_found = True
-                        console.print(f"[blue]Update saved for manual/AI merge:[/blue] .harness/updates/{file.name}")
+                        console.print(f"[blue]Update saved for manual/AI merge:[/blue] .harness/updates/{filename}")
                 
     if updates_found:
         console.print("\n[bold yellow]Updates downloaded successfully![/bold yellow]")
