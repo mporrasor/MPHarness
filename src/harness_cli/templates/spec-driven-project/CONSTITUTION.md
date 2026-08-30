@@ -22,4 +22,11 @@ This file defines the immutable rules, principles, and guidelines for this proje
 - No "magic numbers" in code; extract to constants.
 - **Git Commits:** Commits MUST be atomic. Never mix unrelated changes in a single commit (e.g., do not mix a feature update with a harness update or a bug fix). Commit messages must be detailed and readable (in English to maintain consistency). Avoid terse messages. Clearly explain *what* is included and *why*.
 
+## 4. Security & OWASP Guidelines
+- **Authentication & Authorization:** Force server-side authentication; never trust the client. Hash all passwords using strong algorithms (e.g., bcrypt, Argon2). Enforce Row Level Security (RLS) and restrict record access to authorized owners only. Limit login attempts (Rate Limiting) and implement bot protection.
+- **Data Protection & Cryptography:** Encrypt sensitive data at rest and in transit. Force HTTPS for all traffic. Protect session cookies (must be HttpOnly, Secure, and SameSite). Use public/anon keys for clients; NEVER expose service/admin keys. Hide all API keys in environment variables and ensure `.env` is in `.gitignore` (No secrets in Git).
+- **Input Validation & Output Encoding:** Validate and sanitize all inputs strictly on the server-side. Escape all user-generated content to prevent XSS. Block mass assignment / field manipulation (e.g., don't let users update their `is_admin` field). Strictly restrict file uploads (validate MIME type, size, and prevent execution).
+- **Application Security (OWASP):** Limit API responses (do not leak internal stack traces or excessive object data). Add HTTP security headers (CSP, HSTS, X-Frame-Options). Regularly scan dependencies for known vulnerabilities. Strictly configure CORS (no `*` in production). Adhere to the OWASP Top 10 guidelines in all architectural decisions.
+- **Principle of Least Privilege & Auditing:** Give services, database users, and containers only the absolute minimum permissions required. Log critical actions (e.g., user deletion, permission changes) but *never* log sensitive data (like passwords or session tokens) in plain text.
+
 > **AI Instruction:** When generating code, always cross-reference these rules. Do not suggest or implement patterns that violate this constitution.
