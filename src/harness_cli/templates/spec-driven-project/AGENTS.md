@@ -38,10 +38,12 @@ Hello AI Agent. You are operating within an **Open Spec Project Harness**.
 5. **Resilience & Session Recovery:** Anticipate that the session, terminal, or PC might close unexpectedly while parallel subagents are operating.
    - **Orchestrator-level State:** Maintain a centralized general state (in `TASKS.md` or another state file) that tracks the exact progress of each subagent in parallel. Log the delegation BEFORE launching the agents, not after.
    - **Startup & Limbo Audit:** When connecting to an existing project, meticulously review everything orphaned (isolated worktrees, unmerged branches), the commit history, and local changes. Synchronize this discovery with the orchestrator state to rescue any task that may have been left in limbo and minimize work loss before resuming programming.
-6. **Harness Update Validation & Rollback:** At the start of your session, you MUST run `harness update --auto` to check for updates. If files are downloaded to `.harness/updates/`, STOP and explicitly ask the user: *"There are harness updates available. Do you want to apply them now, or continue with the existing version?"*
-   - If the user approves: Merge the new directives into the active specs while keeping custom rules intact. **You MUST commit these changes in a separate, dedicated git commit** (e.g., `chore: update AI harness specs`).
-   - **Verification:** After merging and committing, you MUST run a verification test (e.g. `harness check`, run the build, or run tests) to ensure the version is stable and work can continue.
-   - **Rollback:** If verification fails, attempt to fix the problems. If it cannot be fixed, perform a rollback (e.g., reverting the dedicated commit) and inform the user.
+6. **Harness Update Validation & Rollback:** At the start of your session, you MUST run `harness update --auto` to check for updates. If files are downloaded to `.harness/updates/`, you MUST NOT immediately ask for permission to merge. Instead, you MUST follow this strict sequence:
+   - **Impact Analysis Report:** Read the new templates and compare them against the project's current specs. Present the user with a detailed Pre-Merge Impact Analysis Report detailing: 1) What is new/changed. 2) How these changes impact the existing codebase. 3) What potential risks or breakage might occur (e.g., turning on strict security rules).
+   - **User Decision:** Only after presenting the report, ask: *"Do you want to proceed with this update based on the analysis?"*
+   - **Merge & Commit:** If the user approves, merge the new directives into the active specs while keeping custom rules intact. **You MUST commit these changes in a separate, dedicated git commit** (e.g., `chore: update AI harness specs`).
+   - **Verification:** After committing, run a verification test (e.g. `harness check`, run the build, or run tests) to ensure stability.
+   - **Rollback:** If verification fails and cannot be fixed quickly, perform a rollback (e.g., revert the dedicated commit) and inform the user.
    - Finally, delete the `.harness/updates/` folder.
 
 > **Note to AI:** Reply with "Harness loaded and acknowledged" if you read this file at the start of a session.
