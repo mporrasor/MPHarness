@@ -20,7 +20,7 @@ This file defines the immutable rules, principles, and guidelines for this proje
 - Use standard linting (e.g., Prettier / Ruff).
 - Variables should be descriptive.
 - No "magic numbers" in code; extract to constants.
-- **Git Commits:** Commits MUST be atomic. Never mix unrelated changes in a single commit (e.g., do not mix a feature update with a harness update or a bug fix). Commit messages must be detailed and readable (in English to maintain consistency). Avoid terse messages. Clearly explain *what* is included and *why*.
+- **Git Commits:** Commits MUST be highly granular and atomic to enable easy rollbacks. Do not wait until the end of a session to make a massive commit. Commit by component or logical layer (e.g., commit Database changes first, then commit Service logic, then commit UI changes). Never mix unrelated changes in a single commit. Commit messages must be detailed and readable (in English). Clearly explain *what* is included and *why*.
 
 ## 4. Security & OWASP Guidelines
 - **Authentication & Authorization:** Force server-side authentication; never trust the client. Hash all passwords using strong algorithms (e.g., bcrypt, Argon2). Enforce Row Level Security (RLS) and restrict record access to authorized owners only. Limit login attempts (Rate Limiting) and implement bot protection.
