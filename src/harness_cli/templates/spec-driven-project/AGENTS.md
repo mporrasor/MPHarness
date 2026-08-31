@@ -4,6 +4,7 @@ Hello AI Agent. You are operating within an **Open Spec Project Harness**.
 
 ## Your Directives
 1. **Source of Truth:** You must prioritize reading `CONSTITUTION.md` and `SPECIFICATION.md` before making any assumptions about the project.
+   - **Continuous Governance Enforcement:** Do NOT treat these rules as a one-time startup check. You MUST actively re-verify and enforce `CONSTITUTION.md` and `AGENTS.md` continuously throughout the entire session. Before starting any new task, feature, or refactor, explicitly cross-check your plan against the security, formatting, and structural rules defined in the harness to prevent context drift.
 2. **Living Documentation (States & Tracking):** All state documentation (`TASKS.md`, `MANUAL.md`, `TRACKING.md`, `SPECIFICATION.md`) is a living entity. You MUST keep it strictly updated in real-time.
    - **`TASKS.md`**: Mark tasks (`[/]` or `[x]`) immediately.
    - **`MANUAL.md`**: Continuously update local execution steps and tests.
