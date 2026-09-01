@@ -26,37 +26,37 @@ flowchart TD
     classDef final fill:#2e7d32,stroke:#fff,stroke-width:2px,color:#fff
 
     %% Initial Nodes
-    Start([Session Start])
-    Audit[Limbo Audit & Continuous Governance\n(Review CONSTITUTION, git status)] ::: govern
+    Start(["Session Start"])
+    Audit["Limbo Audit & Continuous Governance<br>(Review CONSTITUTION, git status)"] ::: govern
     
     %% Feature Request
-    Req[User Requests a New Feature] ::: userReq
-    SpecCheck{Is the request\nlogically viable?} ::: spec
-    Pushback[Pushback Protocol:\nReject with evidence] ::: govern
+    Req["User Requests a New Feature"] ::: userReq
+    SpecCheck{"Is the request<br>logically viable?"} ::: spec
+    Pushback["Pushback Protocol:<br>Reject with evidence"] ::: govern
     
     %% Living Documentation
-    WriteSpec[1. Document the WHAT in SPECIFICATION.md] ::: spec
-    WriteTasks[2. Document the HOW in TASKS.md] ::: spec
-    WaitApprove[Wait for User Approval\n(Coding is strictly forbidden before this)] ::: userReq
+    WriteSpec["1. Document the WHAT in SPECIFICATION.md"] ::: spec
+    WriteTasks["2. Document the HOW in TASKS.md"] ::: spec
+    WaitApprove["Wait for User Approval<br>(Coding is strictly forbidden before this)"] ::: userReq
 
     %% Orchestration
-    Measure[Dynamic Resource Measurement\n(Current RAM/CPU)] ::: orchestrate
-    Collision{Collision Analysis:\nDo tasks touch the same\nglobal/serialized files?} ::: orchestrate
-    LogPre[Pre-Delegation Logging:\nLog assignment in TASKS.md] ::: orchestrate
-    SpawnParallel[Parallelize:\nSpawn Multiple Subagents] ::: orchestrate
-    SpawnSeries[Sequential:\nRun 1-by-1 to avoid\n'false reds'] ::: orchestrate
+    Measure["Dynamic Resource Measurement<br>(Current RAM/CPU)"] ::: orchestrate
+    Collision{"Collision Analysis:<br>Do tasks touch the same<br>global/serialized files?"} ::: orchestrate
+    LogPre["Pre-Delegation Logging:<br>Log assignment in TASKS.md"] ::: orchestrate
+    SpawnParallel["Parallelize:<br>Spawn Multiple Subagents"] ::: orchestrate
+    SpawnSeries["Sequential:<br>Run 1-by-1 to avoid<br>'false reds'"] ::: orchestrate
 
     %% Execution (Loop)
-    Code[Write Code (Component-Level)] ::: execute
-    Commit[Early Commit\n(BEFORE verification)] ::: execute
-    Verify[Exhaustive Verification\n(Tests / Visual Validation)] ::: execute
-    Fail{Does Verification Fail?} ::: execute
-    Rollback[Self-Correction Loop / Rollback] ::: execute
+    Code["Write Code (Component-Level)"] ::: execute
+    Commit["Early Commit<br>(BEFORE verification)"] ::: execute
+    Verify["Exhaustive Verification<br>(Tests / Visual Validation)"] ::: execute
+    Fail{"Does Verification Fail?"} ::: execute
+    Rollback["Self-Correction Loop / Rollback"] ::: execute
 
     %% Closure
-    Track[Update TRACKING.md] ::: final
-    Archive[Auto-Maintenance:\nPackage tasks into /archive/vX.md] ::: final
-    Done([Phase Completed - Waiting for next instruction])
+    Track["Update TRACKING.md"] ::: final
+    Archive["Auto-Maintenance:<br>Package tasks into /archive/vX.md"] ::: final
+    Done(["Phase Completed - Waiting for next instruction"])
 
     %% Connections
     Start --> Audit
