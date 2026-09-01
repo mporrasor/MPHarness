@@ -25,37 +25,27 @@ flowchart TD
     classDef execute fill:#1565c0,stroke:#fff,stroke-width:2px,color:#fff
     classDef final fill:#2e7d32,stroke:#fff,stroke-width:2px,color:#fff
 
-    %% Initial Nodes
+    %% Nodes
     Start(["Session Start"])
-    Audit["Limbo Audit & Continuous Governance<br>(Review CONSTITUTION, git status)"] ::: govern
-    
-    %% Feature Request
-    Req["User Requests a New Feature"] ::: userReq
-    SpecCheck{"Is the request<br>logically viable?"} ::: spec
-    Pushback["Pushback Protocol:<br>Reject with evidence"] ::: govern
-    
-    %% Living Documentation
-    WriteSpec["1. Document the WHAT in SPECIFICATION.md"] ::: spec
-    WriteTasks["2. Document the HOW in TASKS.md"] ::: spec
-    WaitApprove["Wait for User Approval<br>(Coding is strictly forbidden before this)"] ::: userReq
-
-    %% Orchestration
-    Measure["Dynamic Resource Measurement<br>(Current RAM/CPU)"] ::: orchestrate
-    Collision{"Collision Analysis:<br>Do tasks touch the same<br>global/serialized files?"} ::: orchestrate
-    LogPre["Pre-Delegation Logging:<br>Log assignment in TASKS.md"] ::: orchestrate
-    SpawnParallel["Parallelize:<br>Spawn Multiple Subagents"] ::: orchestrate
-    SpawnSeries["Sequential:<br>Run 1-by-1 to avoid<br>'false reds'"] ::: orchestrate
-
-    %% Execution (Loop)
-    Code["Write Code (Component-Level)"] ::: execute
-    Commit["Early Commit<br>(BEFORE verification)"] ::: execute
-    Verify["Exhaustive Verification<br>(Tests / Visual Validation)"] ::: execute
-    Fail{"Does Verification Fail?"} ::: execute
-    Rollback["Self-Correction Loop / Rollback"] ::: execute
-
-    %% Closure
-    Track["Update TRACKING.md"] ::: final
-    Archive["Auto-Maintenance:<br>Package tasks into /archive/vX.md"] ::: final
+    Audit["Limbo Audit & Continuous Governance<br>(Review CONSTITUTION, git status)"]
+    Req["User Requests a New Feature"]
+    SpecCheck{"Is the request<br>logically viable?"}
+    Pushback["Pushback Protocol:<br>Reject with evidence"]
+    WriteSpec["1. Document the WHAT in SPECIFICATION.md"]
+    WriteTasks["2. Document the HOW in TASKS.md"]
+    WaitApprove["Wait for User Approval<br>(Coding is strictly forbidden before this)"]
+    Measure["Dynamic Resource Measurement<br>(Current RAM/CPU)"]
+    Collision{"Collision Analysis:<br>Do tasks touch the same<br>global/serialized files?"}
+    LogPre["Pre-Delegation Logging:<br>Log assignment in TASKS.md"]
+    SpawnParallel["Parallelize:<br>Spawn Multiple Subagents"]
+    SpawnSeries["Sequential:<br>Run 1-by-1 to avoid<br>'false reds'"]
+    Code["Write Code (Component-Level)"]
+    Commit["Early Commit<br>(BEFORE verification)"]
+    Verify["Exhaustive Verification<br>(Tests / Visual Validation)"]
+    Fail{"Does Verification Fail?"}
+    Rollback["Self-Correction Loop / Rollback"]
+    Track["Update TRACKING.md"]
+    Archive["Auto-Maintenance:<br>Package tasks into /archive/vX.md"]
     Done(["Phase Completed - Waiting for next instruction"])
 
     %% Connections
@@ -86,6 +76,14 @@ flowchart TD
     
     Track --> Archive
     Archive --> Done
+
+    %% Apply Classes
+    class Req,WaitApprove userReq
+    class Audit,Pushback govern
+    class SpecCheck,WriteSpec,WriteTasks spec
+    class Measure,Collision,LogPre,SpawnParallel,SpawnSeries orchestrate
+    class Code,Commit,Verify,Fail,Rollback execute
+    class Track,Archive,Done final
 ```
 
 ### Workflow Phases Explained:
