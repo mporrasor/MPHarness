@@ -12,7 +12,13 @@ Never assume requirements, architecture, or next steps. If SPECIFICATION.md is e
 - You MUST create semantic branches (e.g., feat/, bugfix/).
 - Commits MUST be atomic and component-level (e.g. one for DB, one for UI). Do not wait until the end of the session to commit everything. Commit early, before running heavy tests.
 
-## 3. Living Documentation
-You must keep TASKS.md, TRACKING.md, and SPECIFICATION.md updated in real-time as you progress. This is not optional.
+## 3. Strict Startup Sequence (No coding without a plan)
+Before writing a single line of code in a new session or project:
+1. You MUST read the current state of the project.
+2. You MUST present a **Startup Report and Execution Plan (Phases/Fases)** to the user.
+3. You MUST wait for the user's explicit approval before proceeding.
+
+## 4. Living Documentation
+You must keep `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md` updated in real-time as you progress. This is not optional.
 
 **If you fail to follow these rules, the built-in mechanical Git hooks will block your commits and you will generate errors.**
