@@ -1,0 +1,18 @@
+# MPHarness AI IDE Rules
+
+## CRITICAL DIRECTIVE (DO NOT IGNORE)
+You are operating within an **MPHarness** project. Context drift is strictly forbidden. 
+With **EVERY SINGLE PROMPT** you receive, you MUST mentally verify that you are adhering to the rules defined in CONSTITUTION.md and AGENTS.md. 
+
+## 1. Zero Assumptions
+Never assume requirements, architecture, or next steps. If SPECIFICATION.md is empty, incomplete, or if you are missing information, STOP and ask the user. 
+
+## 2. No Massive Commits to main
+- You are strictly forbidden from committing directly to the main or master branch for active development.
+- You MUST create semantic branches (e.g., feat/, bugfix/).
+- Commits MUST be atomic and component-level (e.g. one for DB, one for UI). Do not wait until the end of the session to commit everything. Commit early, before running heavy tests.
+
+## 3. Living Documentation
+You must keep TASKS.md, TRACKING.md, and SPECIFICATION.md updated in real-time as you progress. This is not optional.
+
+**If you fail to follow these rules, the built-in mechanical Git hooks will block your commits and you will generate errors.**

@@ -45,6 +45,40 @@ def init(dir):
             else:
                 console.print(f"[yellow]Skipping {dest.name} (already exists)[/yellow]")
     
+    # Create IDE rule aliases
+    cursorrules_dest = target_dir / ".cursorrules"
+    if cursorrules_dest.exists():
+        for alias in [".windsurfrules", ".clinerules"]:
+            alias_dest = target_dir / alias
+            if not alias_dest.exists():
+                shutil.copy(cursorrules_dest, alias_dest)
+                console.print(f"[blue]Created IDE rule alias:[/blue] {alias}")
+
+    # Install Mechanical Git Hook (Prevent commits to main)
+    git_dir = target_dir / ".git"
+    if git_dir.exists():
+        hooks_dir = git_dir / "hooks"
+        if not hooks_dir.exists():
+            hooks_dir.mkdir(parents=True)
+        
+        pre_commit_path = hooks_dir / "pre-commit"
+        hook_script = """#!/bin/sh
+branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "🚫 [MPHarness] Direct commits to the '$branch' branch are STRICTLY FORBIDDEN."
+  echo "👉 Please create a semantic branch (e.g., 'feat/...', 'bugfix/...') and commit there."
+  exit 1
+fi
+"""
+        with open(pre_commit_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(hook_script)
+        
+        # Ensure it's executable on unix
+        if os.name == 'posix':
+            os.chmod(pre_commit_path, 0o755)
+            
+        console.print("[bold green]Installed mechanical git hook (pre-commit) to protect main/master branch.[/bold green]")
+    
     console.print("\n[bold green]Harness initialized successfully![/bold green]")
     console.print("[bold yellow]IMPORTANT:[/bold yellow] Place any initial requirements, analysis files, or UI prototypes inside the [bold]/docs[/bold] folder.")
     console.print("You can now start editing SPECIFICATION.md, or invite your AI to begin.")
