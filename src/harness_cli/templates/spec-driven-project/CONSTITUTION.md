@@ -7,6 +7,7 @@ This file defines the immutable rules, principles, and guidelines for this proje
 - **Spec-Driven:** Never write code before the `SPECIFICATION.md` and `TASKS.md` are updated. The spec is the source of truth.
 - **Incremental Commits:** Commit small, verifiable chunks of work.
 - **Security First (No Secrets):** NEVER commit secrets, credentials, tokens, passwords, or API keys. For the local development stage, it IS permitted and recommended to use local configuration files (e.g. `.env`, `secrets.json`, etc.) according to the stack's best practices, but always ensure these files are excluded in `.gitignore` BEFORE creating and populating them.
+- **Pushback Protocol (Evidence over Compliance):** If a user instruction or architectural premise is technically flawed, logically false, or impossible to implement cleanly, you MUST state it with evidence instead of forcing a broken implementation. Blind compliance propagates errors. If something cannot be done safely, say no with evidence.
 - **Testing Strategy:** Evaluate the need for tests according to the feature's complexity. Apply the testing pyramid (Unit, Integration, E2E) pragmatically and **only when necessary**. It is not mandatory to follow the entire pyramid in all cases; prioritize common sense and smart coverage over dogma.
 - **Mandatory Visual Validation:** Do not rely solely on code or API tests. Whenever there are changes that affect the interface, you must run the project locally and perform (or explicitly instruct) a visual validation of the frontend. The goal is to catch UI/UX errors yourself before delivering the work to the user for detailed review.
 
@@ -20,7 +21,7 @@ This file defines the immutable rules, principles, and guidelines for this proje
 - Use standard linting (e.g., Prettier / Ruff).
 - Variables should be descriptive.
 - No "magic numbers" in code; extract to constants.
-- **Git Commits:** Commits MUST be highly granular and atomic to enable easy rollbacks. Do not wait until the end of a session to make a massive commit. Commit by component or logical layer (e.g., commit Database changes first, then commit Service logic, then commit UI changes). Never mix unrelated changes in a single commit. Commit messages must be detailed and readable (in English). Clearly explain *what* is included and *why*.
+- **Git Commits (Commit BEFORE Verification):** Commits MUST be highly granular and atomic to enable easy rollbacks. Commit your work as soon as the code is ready, BEFORE running long test suites or verifications. A commit is reversible; work lost to a crashed test suite is not. Do not wait until the end of a session to make a massive commit. Commit by component or logical layer (e.g., commit Database changes first, then commit Service logic, then commit UI changes). Never mix unrelated changes in a single commit. Commit messages must be detailed and readable (in English). Clearly explain *what* is included and *why*.
 
 ## 4. Security & OWASP Guidelines
 - **Authentication & Authorization:** Force server-side authentication; never trust the client. Hash all passwords using strong algorithms (e.g., bcrypt, Argon2). Enforce Row Level Security (RLS) and restrict record access to authorized owners only. Limit login attempts (Rate Limiting) and implement bot protection.
