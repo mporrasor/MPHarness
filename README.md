@@ -11,6 +11,90 @@ It prevents AI agents from guessing requirements, writing untested code, or losi
 - **Living Documentation:** Automatic maintenance of `TASKS.md`, `MANUAL.md`, and `TRACKING.md`.
 - **Testing Enforcement:** Mandatory UI visual validation and pragmatic testing strategy.
 
+## AI Workflow & Lifecycle
+
+The following diagram illustrates the complete lifecycle and the strict methodology (Spec-Driven) that an AI agent follows when operating within an MPHarness-governed project.
+
+```mermaid
+flowchart TD
+    %% Styles
+    classDef userReq fill:#2b5c8f,stroke:#fff,stroke-width:2px,color:#fff
+    classDef govern fill:#4a148c,stroke:#fff,stroke-width:2px,color:#fff
+    classDef spec fill:#00695c,stroke:#fff,stroke-width:2px,color:#fff
+    classDef orchestrate fill:#e65100,stroke:#fff,stroke-width:2px,color:#fff
+    classDef execute fill:#1565c0,stroke:#fff,stroke-width:2px,color:#fff
+    classDef final fill:#2e7d32,stroke:#fff,stroke-width:2px,color:#fff
+
+    %% Initial Nodes
+    Start([Session Start])
+    Audit[Limbo Audit & Continuous Governance\n(Review CONSTITUTION, git status)] ::: govern
+    
+    %% Feature Request
+    Req[User Requests a New Feature] ::: userReq
+    SpecCheck{Is the request\nlogically viable?} ::: spec
+    Pushback[Pushback Protocol:\nReject with evidence] ::: govern
+    
+    %% Living Documentation
+    WriteSpec[1. Document the WHAT in SPECIFICATION.md] ::: spec
+    WriteTasks[2. Document the HOW in TASKS.md] ::: spec
+    WaitApprove[Wait for User Approval\n(Coding is strictly forbidden before this)] ::: userReq
+
+    %% Orchestration
+    Measure[Dynamic Resource Measurement\n(Current RAM/CPU)] ::: orchestrate
+    Collision{Collision Analysis:\nDo tasks touch the same\nglobal/serialized files?} ::: orchestrate
+    LogPre[Pre-Delegation Logging:\nLog assignment in TASKS.md] ::: orchestrate
+    SpawnParallel[Parallelize:\nSpawn Multiple Subagents] ::: orchestrate
+    SpawnSeries[Sequential:\nRun 1-by-1 to avoid\n'false reds'] ::: orchestrate
+
+    %% Execution (Loop)
+    Code[Write Code (Component-Level)] ::: execute
+    Commit[Early Commit\n(BEFORE verification)] ::: execute
+    Verify[Exhaustive Verification\n(Tests / Visual Validation)] ::: execute
+    Fail{Does Verification Fail?} ::: execute
+    Rollback[Self-Correction Loop / Rollback] ::: execute
+
+    %% Closure
+    Track[Update TRACKING.md] ::: final
+    Archive[Auto-Maintenance:\nPackage tasks into /archive/vX.md] ::: final
+    Done([Phase Completed - Waiting for next instruction])
+
+    %% Connections
+    Start --> Audit
+    Audit --> Req
+    Req --> SpecCheck
+    SpecCheck -- Inviable --> Pushback
+    Pushback --> Req
+    SpecCheck -- Viable --> WriteSpec
+    WriteSpec --> WriteTasks
+    WriteTasks --> WaitApprove
+    WaitApprove --> Measure
+    
+    Measure --> Collision
+    Collision -- No Collision --> LogPre
+    Collision -- Collision Detected --> SpawnSeries
+    LogPre --> SpawnParallel
+    
+    SpawnParallel --> Code
+    SpawnSeries --> Code
+    
+    Code --> Commit
+    Commit --> Verify
+    Verify --> Fail
+    Fail -- Yes (Max 3 attempts) --> Rollback
+    Rollback --> Code
+    Fail -- No (Green) --> Track
+    
+    Track --> Archive
+    Archive --> Done
+```
+
+### Workflow Phases Explained:
+1. **Governance (Purple):** At the start of every session and before any instruction, the AI self-audits against the Constitution. If you request something technically unfeasible, the *Pushback Protocol* engages.
+2. **Spec-Driven (Teal):** The golden rule. It is strictly forbidden to write code without first documenting the "What" and the "How", and obtaining your explicit approval.
+3. **Orchestration (Orange):** The AI measures the actual RAM available at that exact moment and analyzes file collisions to intelligently decide whether to run tasks in parallel or sequentially.
+4. **Execution (Blue):** Note how the *Early Commit* happens BEFORE verification. This ensures that if a heavy test suite crashes the system, your code is already safely stored in Git.
+5. **Closure (Dark Green):** The changelog is updated and the AI automatically performs cleanup, archiving the completed historical tasks to `/archive/`, leaving a clean slate for the next feature.
+
 ## How to Use the Harness
 
 You **do not** need to manually copy the template folders into your new projects. The harness comes with a built-in CLI to automatically bootstrap any directory.
