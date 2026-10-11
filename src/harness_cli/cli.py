@@ -251,5 +251,55 @@ def update(dir, auto):
     else:
         console.print("\n[bold green]Your harness templates are up to date.[/bold green]")
 
+@main.command()
+@click.option('--dir', default='.', help='Directory to inspect.')
+def tools(dir):
+    """Inspect and report active tools and routing assignments (SpecKit, OpenSpec, Gitleaks, MPHarness)."""
+    target_dir = Path(dir).resolve()
+    
+    console.print("\n[bold cyan]=== MPHarness Ecosystem & Action Dispatcher ===[/bold cyan]\n")
+    
+    # 1. MPHarness Core
+    console.print("[bold green]✓ MPHarness (Supreme Governance):[/bold green] [bold]ACTIVE[/bold]")
+    console.print("  • Scope: OWASP Security, Gitleaks Pre-commit Hook, Branch Shielding, Context Drift Protection")
+    
+    # 2. Gitleaks
+    import shutil
+    gitleaks_found = shutil.which("gitleaks") is not None
+    if not gitleaks_found:
+        local_app = os.environ.get("LOCALAPPDATA", "")
+        if local_app:
+            winget_path = Path(local_app) / "Microsoft" / "WinGet" / "Packages" / "Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe" / "gitleaks.exe"
+            gitleaks_found = winget_path.exists()
+            
+    if gitleaks_found:
+        console.print("[bold green]✓ Gitleaks:[/bold green] [green]INSTALLED & INTEGRATED[/green]")
+        console.print("  • Scope: Mechanical secret leak blocking in pre-commit hook")
+    else:
+        console.print("[bold yellow]! Gitleaks:[/bold yellow] [yellow]NOT FOUND[/yellow] (Fallback regex scanning active)")
+        console.print("  • Install via: winget install Gitleaks.Gitleaks")
+
+    # 3. Spec Kit
+    speckit_found = shutil.which("specify") is not None or (target_dir / ".speckit").exists() or (target_dir / ".specify").exists()
+    if speckit_found:
+        console.print("[bold green]✓ GitHub Spec Kit (specify-cli):[/bold green] [green]DETECTED[/green]")
+        console.print("  • Assigned For: [cyan]New Features & Greenfield Domains[/cyan] (/speckit.specify -> /speckit.plan -> /speckit.tasks)")
+        console.print("  • Storage: Isolated in .speckit/ (Macro milestones synced to root TASKS.md)")
+    else:
+        console.print("[bold white]○ GitHub Spec Kit (specify-cli):[/bold white] [dim]Not detected in project[/dim]")
+        console.print("  • Assigned For: New Features (Install via: uv tool install specify-cli)")
+
+    # 4. OpenSpec
+    openspec_found = shutil.which("openspec") is not None or (target_dir / ".openspec").exists()
+    if openspec_found:
+        console.print("[bold green]✓ OpenSpec (@fission-ai/openspec):[/bold green] [green]DETECTED[/green]")
+        console.print("  • Assigned For: [cyan]Incremental Modifications & Refactors[/cyan] (openspec propose -> apply -> archive)")
+        console.print("  • Storage: Quarantined in .openspec/proposals/ until accepted")
+    else:
+        console.print("[bold white]○ OpenSpec (@fission-ai/openspec):[/bold white] [dim]Not detected in project[/dim]")
+        console.print("  • Assigned For: Incremental Spec Changes (Install via: npm i -g @fission-ai/openspec)")
+
+    console.print("\n[bold blue]Dispatch Rule:[/bold blue] AI automatically routes New Features -> SpecKit, Modifications -> OpenSpec. Zero file collisions or duplicated checklists.\n")
+
 if __name__ == "__main__":
     main()

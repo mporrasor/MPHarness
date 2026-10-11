@@ -4,7 +4,7 @@ This file defines the immutable rules, principles, and guidelines for this proje
 
 ## 1. Core Principles
 - **Clarity over Cleverness:** Code should be readable and maintainable.
-- **Spec-Driven:** Never write code before the `SPECIFICATION.md` and `TASKS.md` are updated. The spec is the source of truth.
+- **Spec-Driven & Single Source of Truth:** Never write code before specifications and tasks are updated. When external tools (Spec Kit or OpenSpec) are present, delegate micro-tasks to the active tool while keeping root `TASKS.md` as the high-level executive milestone roadmap. NEVER duplicate identical task checklists across multiple files.
 - **Incremental Commits:** Commit small, verifiable chunks of work.
 - **Security First (No Secrets):** NEVER commit secrets, credentials, tokens, passwords, or API keys. For the local development stage, it IS permitted and recommended to use local configuration files (e.g. `.env`, `secrets.json`, etc.) according to the stack's best practices, but always ensure these files are excluded in `.gitignore` BEFORE creating and populating them.
 - **Pushback Protocol (Evidence over Compliance):** If a user instruction or architectural premise is technically flawed, logically false, or impossible to implement cleanly, you MUST state it with evidence instead of forcing a broken implementation. Blind compliance propagates errors. If something cannot be done safely, say no with evidence.

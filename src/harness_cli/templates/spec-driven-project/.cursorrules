@@ -25,4 +25,10 @@ You must keep `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md` updated in real-
 - NEVER commit secrets, API keys, private tokens, passwords, or `.env` files.
 - The repository enforces mechanical pre-commit scanning with Gitleaks. If you stage any credentials, the hook will abort the commit.
 
+## 6. Automatic Tool Selector (SpecKit vs OpenSpec)
+- **New Feature from scratch?** -> Route to GitHub Spec Kit (`/speckit.specify` -> `/speckit.plan` -> `/speckit.tasks`).
+- **Modifying / Refactoring existing logic?** -> Route to OpenSpec (`openspec propose` delta).
+- **Committing / Security / Branching?** -> Governed by MPHarness (Gitleaks, Pre-commit, OWASP).
+- **Zero Double-Bookkeeping:** Micro-tasks live in the active tool's files; root `TASKS.md` records macro phase milestones. NEVER duplicate checklists across files.
+
 **If you fail to follow these rules, the built-in mechanical Git hooks (branch protection & Gitleaks) will block your commits.**

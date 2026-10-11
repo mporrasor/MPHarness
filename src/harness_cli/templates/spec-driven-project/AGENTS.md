@@ -6,7 +6,7 @@ Hello AI Agent. You are operating within an **Open Spec Project Harness**.
 1. **Source of Truth:** You must prioritize reading `CONSTITUTION.md` and `SPECIFICATION.md` before making any assumptions about the project.
    - **Continuous Governance Enforcement:** Do NOT treat these rules as a one-time startup check. You MUST actively re-verify and enforce `CONSTITUTION.md` and `AGENTS.md` continuously throughout the entire session. Before starting any new task, feature, or refactor, explicitly cross-check your plan against the security, formatting, and structural rules defined in the harness to prevent context drift.
 2. **Living Documentation (States & Tracking):** All state documentation (`TASKS.md`, `MANUAL.md`, `TRACKING.md`, `SPECIFICATION.md`) is a living entity. You MUST keep it strictly updated in real-time.
-   - **`TASKS.md`**: Mark tasks (`[/]` or `[x]`) immediately.
+   - **`TASKS.md`**: Mark tasks (`[/]` or `[x]`) immediately. When Spec Kit or OpenSpec is present, root `TASKS.md` records macro phase milestones; detailed micro-tasks live in the active tool's files. NEVER duplicate task lists.
    - **`MANUAL.md`**: Continuously update local execution steps and tests.
    - **`TRACKING.md`**: Log the general progress and achievements daily or at the close of each phase/sprint to maintain historical traceability.
    - **Auto-Maintenance (Scale):** You MUST proactively monitor the size of these documents. If `SPECIFICATION.md` becomes too large, autonomously modularize it by extracting domains into a `/specs/` directory and linking them. Whenever a phase or block of work is fully completed, autonomously archive its planning and tasks into a historical versioned file inside `/archive/` (e.g., `/archive/v1_core_features.md`) to keep the active `SPECIFICATION.md` and `TASKS.md` completely clean and focused exclusively on current work. Do this without waiting for user prompts.
@@ -29,6 +29,28 @@ Hello AI Agent. You are operating within an **Open Spec Project Harness**.
 5. **Startup Report & Phase Plan:** Once the project analysis is finished, you MUST present a brief "Startup Report" to the user. This report MUST include a clear Execution Plan broken down into logical **Phases** (Fases). You are STRICTLY FORBIDDEN from writing any code until the user explicitly approves this Phase Plan.
 - **Prototype Handling:** If the user includes a prototype (image, mockup, reference UI), you MUST explicitly ask if the implementation should match 100% (exact) or just "as much as possible" before coding.
 - **Conflicts and On-the-fly Decisions:** If the user requests a change or a decision is made that contradicts the original documentation, requirements, or prototype (assuming the user might have forgotten), you MUST warn of the conflict. Explicitly ask if this new instruction becomes the new "source of truth" (and should be updated in the specs) or if they prefer to keep what was initially established.
+
+## Tool Routing & Action Dispatcher (Automatic Tool Selector)
+To ensure simplicity and eliminate document duplication or confusion, you MUST automatically route each action to the proper tool according to this strict matrix:
+
+1. **Brand New Feature / Greenfield Domain ("Add feature X", "Build new module Y", "Create screen Z"):**
+   - **Assigned Tool:** **GitHub Spec Kit** (if `specify-cli` is available or `.speckit/` exists).
+   - **Action Protocol:** Guide the user through the structured pipeline (`/speckit.specify` -> `/speckit.plan` -> `/speckit.tasks`).
+   - **Boundary Isolation:** All detailed specs and micro-tasks stay strictly inside `.speckit/`. Root `TASKS.md` only records the high-level macro phase (e.g., `- [ ] Phase 2: User Onboarding (SpecKit: .speckit/features/onboarding/tasks.md)`).
+   - **Anti-Duplication Rule:** NEVER duplicate individual line-by-line coding checklists from Spec Kit into root `TASKS.md`.
+
+2. **Modifying / Refactoring Existing Features ("Refactor payment flow", "Update business rule X", "Modify schema"):**
+   - **Assigned Tool:** **OpenSpec** (if `@fission-ai/openspec` is available or `.openspec/` exists).
+   - **Action Protocol:** Treat the change as an isolated delta proposal (`openspec propose` -> `openspec apply` -> `openspec archive`).
+   - **Boundary Isolation:** Keep the proposal quarantined in `.openspec/proposals/` until reviewed and approved. Do NOT pollute baseline `SPECIFICATION.md` until the delta is accepted and merged.
+
+3. **Core Governance, Security & Git Commits (The Outer Shell):**
+   - **Assigned Tool:** **MPHarness (Supreme Authority)**.
+   - **Action Protocol:** Regardless of whether Spec Kit or OpenSpec generated the requirements, `CONSTITUTION.md` rules (OWASP, No Secrets in Git, Gitleaks pre-commit, Semantic branches, Commit before test) are ABSOLUTE. External tools NEVER bypass MPHarness governance.
+
+4. **Standalone Mode (When Neither External Tool is Present):**
+   - **Assigned Tool:** **MPHarness Native**.
+   - **Action Protocol:** Direct standard operation using root `SPECIFICATION.md` and `TASKS.md`.
 
 ## Orchestration & Resource-Aware Parallelism
 1. **Harness & Git Alignment:** The AI MUST verify that the harness files (e.g., `CONSTITUTION.md`, `AGENTS.md`) are located in the root of the active Git repository alongside the project code. If you detect that the harness files are outside the Git repository (e.g., in a parent folder), you MUST proactively migrate all harness files and folders into the Git repository and ensure they are committed.
