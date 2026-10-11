@@ -1,19 +1,30 @@
 # AI Spec Harness (MPHarness)
 
-This repository contains the AI Spec Harness, a CLI tool and template system designed to enforce a strict, specification-driven development workflow for AI coding assistants. 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Security: Gitleaks](https://img.shields.io/badge/Security-Gitleaks%20Protected-brightgreen.svg)](https://github.com/gitleaks/gitleaks)
+[![Ecosystem: SpecKit%20%2B%20OpenSpec](https://img.shields.io/badge/Ecosystem-SpecKit%20%2B%20OpenSpec-orange.svg)](https://github.com/github/spec-kit)
 
-It prevents AI agents from guessing requirements, writing untested code, or losing context during complex multi-agent parallel execution.
+**MPHarness** is an enterprise-grade AI coding governance engine and project harness. It acts as the immutable operating system and security shell for AI coding assistants (Cursor, Windsurf, Claude, Copilot, Cline, etc.).
 
-## Features
-- **Zero Assumptions:** The AI is strictly instructed to never guess requirements or "vibe code" without clear specs.
-- **Resource-Aware Orchestration:** Guidelines for safe parallel agent execution, preventing merge conflicts and resource saturation.
-- **English First:** All code, variables, commits, and documentation must be exclusively in English.
-- **Living Documentation:** Automatic maintenance of `TASKS.md`, `MANUAL.md`, and `TRACKING.md`.
-- **Testing Enforcement:** Mandatory UI visual validation and pragmatic testing strategy.
+It replaces unstructured "vibe coding" with strict **Spec-Driven Development (SDD)**, prevents leaked secrets mechanically via **Gitleaks**, enforces **OWASP Top 10** security, and seamlessly orchestrates **GitHub Spec Kit** and **OpenSpec** without document duplication.
+
+---
+
+## Key Features
+
+* **Mechanical Secret Protection (Gitleaks Hook):** Automatically installs a pre-commit Git hook that scans staged changes using Gitleaks (160+ detectors) and aborts commits containing API keys, private keys, or passwords.
+* **Mechanical Branch Shielding:** Pre-commit hooks physically block accidental direct commits to `main` or `master`, enforcing semantic branches (`feat/`, `bugfix/`).
+* **Multi-Tool Action Dispatcher:** Automatically routes new features to **GitHub Spec Kit** (`specify-cli`) and refactors/modifications to **OpenSpec** (`@fission-ai/openspec`), maintaining a single source of truth without task duplication.
+* **Context Drift Immunity:** Natively injects continuous governance via `.cursorrules`, `.windsurfrules`, and `.clinerules` so the AI never forgets project rules after long conversations.
+* **Hardware & Collision-Aware Orchestration:** Dynamically measures available host RAM and CPU cores before parallelizing tasks, serializing conflicting dependencies to avoid "false red" build crashes.
+* **Strict OWASP & Security Constitution:** Pre-configured immutable rules requiring server-side validation, anti-CSRF tokens, HSTS, input sanitization, least privilege, and anti-enumeration.
+* **Living Documentation & Auto-Archiving:** Automatically tracks progress across `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md`, autonomously modularizing large specs into `/specs/` and archiving finished milestones into `/archive/`.
+
+---
 
 ## AI Workflow & Lifecycle
 
-The following diagram illustrates the complete lifecycle and the strict methodology (Spec-Driven) that an AI agent follows when operating within an MPHarness-governed project.
+The following diagram illustrates the complete lifecycle and the strict methodology that an AI agent follows when operating within an MPHarness-governed project:
 
 ```mermaid
 flowchart TD
@@ -87,74 +98,108 @@ flowchart TD
 ```
 
 ### Workflow Phases Explained:
-1. **Governance (Purple):** At the start of every session and before any instruction, the AI self-audits against the Constitution. If you request something technically unfeasible, the *Pushback Protocol* engages.
-2. **Spec-Driven (Teal):** The golden rule. It is strictly forbidden to write code without first documenting the "What" and the "How", and obtaining your explicit approval.
-3. **Orchestration (Orange):** The AI measures the actual RAM available at that exact moment and analyzes file collisions to intelligently decide whether to run tasks in parallel or sequentially.
-4. **Execution (Blue):** Note how the *Early Commit* happens BEFORE verification. This ensures that if a heavy test suite crashes the system, your code is already safely stored in Git.
-5. **Closure (Dark Green):** The changelog is updated and the AI automatically performs cleanup, archiving the completed historical tasks to `/archive/`, leaving a clean slate for the next feature.
+1. **Governance (Purple):** At the start of every session and before any task, the AI self-audits against the Constitution. If you request an unfeasible change, the *Pushback Protocol* engages with technical evidence.
+2. **Spec-Driven (Teal):** The golden rule. The AI is strictly forbidden from writing code without first documenting the "What" and the "How", and obtaining your explicit approval.
+3. **Orchestration (Orange):** The AI measures real-time available RAM and analyzes file collisions to determine whether tasks can run in parallel or must run sequentially to avoid ghost crashes.
+4. **Execution (Blue):** The *Early Commit* occurs BEFORE verification. If a long test suite crashes, your work is already safely recorded in Git.
+5. **Closure (Dark Green):** The changelog is updated and completed tasks are autonomously archived into `/archive/`, leaving an unpolluted slate for the next phase.
 
-## How to Use the Harness
+---
 
-You **do not** need to manually copy the template folders into your new projects. The harness comes with a built-in CLI to automatically bootstrap any directory.
+## Multi-Tool Ecosystem & Action Dispatcher
+
+MPHarness acts as the supreme governance umbrella while harmonizing with specialized specification engines:
+
+| User Action | Assigned Engine | Storage Boundary | Role of Root `TASKS.md` |
+| :--- | :--- | :--- | :--- |
+| **New Feature / Greenfield Domain** | **GitHub Spec Kit** (`specify-cli`) | Isolated in `.speckit/` | Records executive milestone only (e.g. `- [ ] Phase 2: Payments`) |
+| **Modify / Refactor Existing Logic** | **OpenSpec** (`@fission-ai/openspec`) | Quarantined in `.openspec/proposals/` | Proposal tasks remain isolated until approved and merged |
+| **Commits, Security & Branching** | **MPHarness** (Supreme Authority) | `.git/hooks/pre-commit`, Gitleaks | Enforces zero secrets, OWASP, and branch rules |
+| **Standalone / Fallback Mode** | **MPHarness Native** | Root `SPECIFICATION.md` & `TASKS.md` | Direct native tracking when external tools are absent |
+
+> **Anti-Duplication Rule:** The AI is strictly forbidden from duplicating line-by-line code checklists across both root `TASKS.md` and external tool files (*Zero Double-Bookkeeping*).
+
+---
+
+## CLI Installation & Usage
 
 ### 1. Installation
-Ensure you have Python installed. The project uses `uv` for dependency management.
-From the root of this repository (`MPHarness`), run the bootstrap script for your OS:
-- **Windows:** `.\harness.ps1`
-- **Mac/Linux:** `./harness.sh`
+The harness is distributed as a Python CLI tool managed with `uv`.
 
-This will validate your environment and install the `harness` CLI tool.
+From the repository root:
+* **Windows:** `.\harness.ps1`
+* **Mac/Linux:** `./harness.sh`
+
+Or install globally with:
+```bash
+uv tool install -e C:\Personal\Dev\MPHarness
+```
 
 ### 2. Initializing a Project
-Navigate to your target project folder (it can be empty or an existing project) and run:
-
+Navigate to your project directory (new or existing) and run:
 ```bash
 harness init
 ```
+This automatically:
+* Generates all core specification templates (`CONSTITUTION.md`, `SPECIFICATION.md`, `TASKS.md`, etc.).
+* Creates `.cursorrules`, `.windsurfrules`, and `.clinerules` for prompt injection.
+* Configures `.gitleaks.toml` inheriting 160+ secret detection rules.
+* Auto-populates `.gitignore` with secret exclusions (`.env*`, `*.pem`, `*.key`, `secrets.json`, `/docs/`).
+* Installs the mechanical `pre-commit` Git hook protecting `main` and running Gitleaks.
 
-This command will automatically generate all the required AI templates (`CONSTITUTION.md`, `SPECIFICATION.md`, `AGENTS.md`, etc.) in that directory. 
-**Important:** The command also creates a `/docs` folder. If you have any initial requirements, analysis documents, or UI prototypes, **place them inside `/docs`** before inviting the AI. The AI is strictly instructed to look for requirements there.
+### 3. Inspecting Ecosystem Tools
+To verify active tools and routing assignments:
+```bash
+harness tools
+```
+Output:
+```text
+=== MPHarness Ecosystem & Action Dispatcher ===
 
-### 3. Start Working with the AI
-Once initialized and your initial files are placed in `/docs`, open the project in your AI IDE or prompt your agent to look at the folder.
-The first thing the AI will do is read the `AGENTS.md` directives and adapt to the strict workflow. 
+[+] MPHarness (Supreme Governance): ACTIVE
+  * Scope: OWASP Security, Gitleaks Pre-commit Hook, Branch Shielding, Context Drift Protection
+[+] Gitleaks: INSTALLED & INTEGRATED
+  * Scope: Mechanical secret leak blocking in pre-commit hook
+[+] GitHub Spec Kit (specify-cli): DETECTED
+  * Assigned For: New Features & Greenfield Domains
+[+] OpenSpec (@fission-ai/openspec): DETECTED
+  * Assigned For: Incremental Modifications & Refactors
 
-- **If it's a new project without requirements:** The AI will start a brief "vibecoding" interview with you to build the `SPECIFICATION.md` before writing any code.
-- **If it's an existing project:** The AI will run a system audit (checking for orphaned git branches and uncommitted work) before continuing.
+Dispatch Rule: AI automatically routes New Features -> SpecKit, Modifications -> OpenSpec. Zero file collisions or duplicated checklists.
+```
 
-### 4. Validating the Harness
-To ensure all required files are present and properly tracked by the AI, you can run:
+### 4. Validating Structure
+Check if all required harness files are present:
 ```bash
 harness check
 ```
 
 ### 5. Updating the Harness
-As the central MPHarness repository evolves, updates can be pulled directly from the GitHub repository into your active projects **without overwriting your custom rules**:
+Pull upstream improvements from GitHub safely into existing projects:
 ```bash
 harness update
 ```
-*(Note: If you run this manually, it downloads to `.harness/updates/`. However, your AI Agent is instructed to run `harness update --auto` automatically in the background when it starts. If updates are found, it will ask for your permission to merge them safely.)*
+*(Templates are downloaded to `.harness/updates/`. Your AI Agent is instructed to inspect them, generate a Pre-Merge Impact Analysis Report, and ask for permission before applying.)*
 
-## 6. Workflow Scenarios
+---
 
-Here is how to use the harness in practice:
+## Practical Workflow Scenarios
 
-### Scenario A: Starting a 100% New Project
-**Goal: Extract ideas and plan before coding.**
-1. Create an empty folder (e.g., `mkdir MyNewApp` and `cd MyNewApp`).
-2. Run `harness init`. The CLI will create the `/docs` folder and all markdown templates.
-3. Save any ideas, raw requirements, or sketches inside `/docs`.
-4. Open your AI IDE and say: *"I have an idea for an app, please check `/docs` and let's start."*
-5. **AI Behavior:** The agent will read `CONSTITUTION.md` and `AGENTS.md`, see it's a new project, and enter an interview mode to build `SPECIFICATION.md` and `ARCHITECTURE.md`. It will not write code until you approve the plan.
+### Scenario A: Building a New Feature
+1. Open your project in Cursor/Windsurf.
+2. Say: *"I want to build a user notification system."*
+3. **AI Behavior:** The AI detects a new greenfield feature, routes it to GitHub Spec Kit, executes `/speckit.specify` and `/speckit.plan`, and logs the milestone in root `TASKS.md`. It will not code until you approve the specification.
 
-### Scenario B: Working on an Ongoing Project (WITH the Harness)
-**Goal: Resume work and check for harness updates safely.**
-1. Open the project in your AI IDE and ask for your next feature (e.g., *"Add the payment gateway."*).
-2. **AI Behavior (Startup Audit & Update):** Before doing anything, the agent will run `harness update --auto` to check for new rules on GitHub. If updates exist, it will ask: *"There are harness updates available. Do you want to apply them now?"*. If approved, it merges them, runs a verification test, and performs a rollback if it fails.
-3. It then reads `TASKS.md` and the Git history to understand the current state before addressing your request.
+### Scenario B: Refactoring Existing Code
+1. Say: *"Change our JWT authentication to use 15-minute refresh tokens."*
+2. **AI Behavior:** The AI detects a change to existing code, routes to OpenSpec, generates a quarantined delta proposal, presents the diff, and applies it upon your approval.
 
-### Scenario C: Working on an Ongoing Project (WITHOUT the Harness)
-**Goal: Tame a chaotic or legacy codebase.**
-1. Open your terminal in the existing project folder and run `harness init`. (This won't alter your code).
-2. Open your AI IDE and say: *"I just injected the AI harness. Please audit this project and fill in the specifications."*
-3. **AI Behavior:** The agent reads the constitution, reverse-engineers your existing codebase to identify the stack, and fills out `ARCHITECTURE.md` and `SPECIFICATION.md`. From that moment on, the project is governed by the strict harness rules.
+### Scenario C: Safe Committing
+1. As code is completed, the AI makes atomic, component-level commits on a semantic branch (`feat/auth-refresh`).
+2. If any API key or secret was accidentally staged, **Gitleaks intercepts the commit immediately** and blocks it before reaching Git history.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
