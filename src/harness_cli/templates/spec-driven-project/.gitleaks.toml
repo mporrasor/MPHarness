@@ -2,6 +2,9 @@
 # Extends the default Gitleaks rules (160+ detectors)
 title = "MPHarness Gitleaks Configuration"
 
+[extend]
+useDefault = true
+
 [allowlist]
 description = "Standard allowlist for non-production documentation and templates"
 paths = [
