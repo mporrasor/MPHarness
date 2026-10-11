@@ -36,28 +36,43 @@ flowchart TD
     classDef execute fill:#1565c0,stroke:#fff,stroke-width:2px,color:#fff
     classDef final fill:#2e7d32,stroke:#fff,stroke-width:2px,color:#fff
 
-    %% Nodes
+    %% Initial Nodes
     Start(["Session Start"])
-    Audit["Limbo Audit & Continuous Governance<br>(Review CONSTITUTION, git status)"]
-    Req["User Requests a New Feature"]
-    SpecCheck{"Is the request<br>logically viable?"}
+    Audit["Limbo Audit & Continuous Governance<br>(Review CONSTITUTION, git status, .cursorrules)"]
+    
+    %% Feature Request & Pushback
+    Req["User Request Received"]
+    SpecCheck{"Is request technically &<br>logically viable?"}
     Pushback["Pushback Protocol:<br>Reject with evidence"]
-    WriteSpec["1. Document the WHAT in SPECIFICATION.md"]
-    WriteTasks["2. Document the HOW in TASKS.md"]
-    WaitApprove["Wait for User Approval<br>(Coding is strictly forbidden before this)"]
-    Measure["Dynamic Resource Measurement<br>(Current RAM/CPU)"]
-    Collision{"Collision Analysis:<br>Do tasks touch the same<br>global/serialized files?"}
-    LogPre["Pre-Delegation Logging:<br>Log assignment in TASKS.md"]
+
+    %% Automatic Action Dispatcher
+    Dispatch{"Action Dispatcher:<br>What type of task is it?"}
+    SpecKitFlow["GitHub Spec Kit Engine<br>(/speckit.specify -> .plan -> .tasks)<br>Stored in .speckit/"]
+    OpenSpecFlow["OpenSpec Delta Engine<br>(openspec propose -> review diff)<br>Quarantined in .openspec/proposals/"]
+    NativeFlow["MPHarness Native Engine<br>Direct update to SPECIFICATION.md<br>and root TASKS.md"]
+    SyncMacro["Zero Double-Bookkeeping:<br>Sync macro milestone to root TASKS.md<br>(Micro-tasks stay in active tool)"]
+    WaitApprove["Wait for User Approval<br>(Coding strictly forbidden before this)"]
+
+    %% Orchestration
+    Measure["Dynamic Hardware Measurement<br>(Current Free RAM & CPU Cores)"]
+    Collision{"Collision Analysis:<br>Do tasks touch shared/serialized files?"}
+    LogPre["Pre-Delegation Logging:<br>Record subagent assignment in TASKS.md"]
     SpawnParallel["Parallelize:<br>Spawn Multiple Subagents"]
-    SpawnSeries["Sequential:<br>Run 1-by-1 to avoid<br>'false reds'"]
-    Code["Write Code (Component-Level)"]
-    Commit["Early Commit<br>(BEFORE verification)"]
-    Verify["Exhaustive Verification<br>(Tests / Visual Validation)"]
+    SpawnSeries["Sequential:<br>Run 1-by-1 to avoid ghost crashes"]
+
+    %% Execution & Mechanical Hook
+    Code["Write Code on Semantic Branch<br>(feat/ or bugfix/ at component-level)"]
+    EarlyCommit["Early Commit<br>(BEFORE long test suites)"]
+    PreCommit{"Mechanical Pre-Commit Hook:<br>1. Not on main/master?<br>2. Gitleaks: No staged secrets?"}
+    HookBlock["🚫 Commit Blocked:<br>Secret detected or direct main commit"]
+    Verify["Exhaustive Verification<br>(Tests / UI Visual Validation)"]
     Fail{"Does Verification Fail?"}
     Rollback["Self-Correction Loop / Rollback"]
+
+    %% Closure
     Track["Update TRACKING.md"]
-    Archive["Auto-Maintenance:<br>Package tasks into /archive/vX.md"]
-    Done(["Phase Completed - Waiting for next instruction"])
+    Archive["Auto-Maintenance:<br>Archive completed phase into /archive/vX.md<br>or OpenSpec archive"]
+    Done(["Phase Completed - Ready for next instruction"])
 
     %% Connections
     Start --> Audit
@@ -65,44 +80,55 @@ flowchart TD
     Req --> SpecCheck
     SpecCheck -- Inviable --> Pushback
     Pushback --> Req
-    SpecCheck -- Viable --> WriteSpec
-    WriteSpec --> WriteTasks
-    WriteTasks --> WaitApprove
+    SpecCheck -- Viable --> Dispatch
+
+    Dispatch -- New Feature --> SpecKitFlow
+    Dispatch -- Modification / Refactor --> OpenSpecFlow
+    Dispatch -- Standalone Mode --> NativeFlow
+
+    SpecKitFlow --> SyncMacro
+    OpenSpecFlow --> SyncMacro
+    NativeFlow --> WaitApprove
+    SyncMacro --> WaitApprove
+
     WaitApprove --> Measure
-    
     Measure --> Collision
     Collision -- No Collision --> LogPre
     Collision -- Collision Detected --> SpawnSeries
     LogPre --> SpawnParallel
-    
+
     SpawnParallel --> Code
     SpawnSeries --> Code
-    
-    Code --> Commit
-    Commit --> Verify
+
+    Code --> EarlyCommit
+    EarlyCommit --> PreCommit
+    PreCommit -- Violation Detected --> HookBlock
+    HookBlock --> Code
+    PreCommit -- Passed --> Verify
+
     Verify --> Fail
     Fail -- Yes (Max 3 attempts) --> Rollback
     Rollback --> Code
-    Fail -- No (Green) --> Track
-    
+    Fail -- No (Passed) --> Track
+
     Track --> Archive
     Archive --> Done
 
     %% Apply Classes
     class Req,WaitApprove userReq
-    class Audit,Pushback govern
-    class SpecCheck,WriteSpec,WriteTasks spec
+    class Audit,Pushback,PreCommit,HookBlock govern
+    class SpecCheck,Dispatch,SpecKitFlow,OpenSpecFlow,NativeFlow,SyncMacro spec
     class Measure,Collision,LogPre,SpawnParallel,SpawnSeries orchestrate
-    class Code,Commit,Verify,Fail,Rollback execute
+    class Code,EarlyCommit,Verify,Fail,Rollback execute
     class Track,Archive,Done final
 ```
 
 ### Workflow Phases Explained:
-1. **Governance (Purple):** At the start of every session and before any task, the AI self-audits against the Constitution. If you request an unfeasible change, the *Pushback Protocol* engages with technical evidence.
-2. **Spec-Driven (Teal):** The golden rule. The AI is strictly forbidden from writing code without first documenting the "What" and the "How", and obtaining your explicit approval.
-3. **Orchestration (Orange):** The AI measures real-time available RAM and analyzes file collisions to determine whether tasks can run in parallel or must run sequentially to avoid ghost crashes.
-4. **Execution (Blue):** The *Early Commit* occurs BEFORE verification. If a long test suite crashes, your work is already safely recorded in Git.
-5. **Closure (Dark Green):** The changelog is updated and completed tasks are autonomously archived into `/archive/`, leaving an unpolluted slate for the next phase.
+1. **Governance & Anti-Drift (Purple):** The AI audits repository state against `CONSTITUTION.md` and `.cursorrules`. If a request is technically flawed or contradictory, the *Pushback Protocol* engages with evidence before any spec is drafted.
+2. **Action Dispatcher & SSoT Specs (Teal):** The harness automatically routes new features to **GitHub Spec Kit** (`.speckit/`) and refactors/modifications to **OpenSpec** (`.openspec/proposals/`). Under the *Zero Double-Bookkeeping* rule, micro-tasks stay inside the active tool, while root `TASKS.md` records macro milestones only. Coding before user approval is strictly prohibited.
+3. **Orchestration & Hardware Check (Orange):** Real-time host RAM and CPU cores are measured dynamically. Tasks with overlapping or serialized files are sequenced to prevent "false red" collisions and limbo states.
+4. **Execution & Mechanical Defense (Blue & Purple):** Code is written on semantic branches (`feat/`) and committed early. The **Mechanical Pre-Commit Hook** intercepts the commit, blocking direct commits to `main` and executing **Gitleaks** to catch secrets before long tests run.
+5. **Closure & Archiving (Dark Green):** Historical logs are updated in `TRACKING.md`, and completed feature specs are autonomously archived to `/archive/`, leaving a clean, unpolluted workspace for the next phase.
 
 ---
 
