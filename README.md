@@ -17,6 +17,7 @@ It replaces unstructured "vibe coding" with strict **Spec-Driven Development (SD
 * **Multi-Tool Action Dispatcher:** Automatically routes new features to **GitHub Spec Kit** (`specify-cli`) and refactors/modifications to **OpenSpec** (`@fission-ai/openspec`), maintaining a single source of truth without task duplication.
 * **Context Drift Immunity:** Natively injects continuous governance via `.cursorrules`, `.windsurfrules`, and `.clinerules` so the AI never forgets project rules after long conversations.
 * **Hardware & Collision-Aware Orchestration:** Dynamically measures available host RAM and CPU cores before parallelizing tasks, serializing conflicting dependencies to avoid "false red" build crashes.
+* **Dependency Health & Selective Pinning (`harness audit`):** Automatically audits NuGet, npm, and Python dependencies for known CVE vulnerabilities and outdated packages. Mandates user proposal approval, respects pinned packages, and requires regression testing before committing.
 * **Strict OWASP & Security Constitution:** Pre-configured immutable rules requiring server-side validation, anti-CSRF tokens, HSTS, input sanitization, least privilege, and anti-enumeration.
 * **Living Documentation & Auto-Archiving:** Automatically tracks progress across `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md`, autonomously modularizing large specs into `/specs/` and archiving finished milestones into `/archive/`.
 
@@ -194,13 +195,32 @@ Output:
 Dispatch Rule: AI automatically routes New Features -> SpecKit, Modifications -> OpenSpec. Zero file collisions or duplicated checklists.
 ```
 
-### 4. Validating Structure
+### 4. Auditing Dependencies & Vulnerabilities
+Scan .NET / NuGet, Node.js (npm/pnpm/yarn), or Python for known CVEs and outdated versions:
+```bash
+harness audit
+```
+Output:
+```text
+=== MPHarness Dependency & Vulnerability Audit ===
+
+[+] .NET / NuGet Project Detected
+  * Checking for vulnerable packages (dotnet list package --vulnerable)...
+  * Checking for outdated packages (dotnet list package --outdated)...
+
+MPHarness Pre-Upgrade Protocol:
+  1. AI MUST present an Upgrade Proposal Report (Package, Current, Target, Reason, Affected Files).
+  2. User can approve or reject specific packages (pinning).
+  3. AI updates ONLY approved packages and MUST run tests on affected modules before committing.
+```
+
+### 5. Validating Structure
 Check if all required harness files are present:
 ```bash
 harness check
 ```
 
-### 5. Updating the Harness
+### 6. Updating the Harness
 Pull upstream improvements from GitHub safely into existing projects:
 ```bash
 harness update
@@ -223,6 +243,11 @@ harness update
 ### Scenario C: Safe Committing
 1. As code is completed, the AI makes atomic, component-level commits on a semantic branch (`feat/auth-refresh`).
 2. If any API key or secret was accidentally staged, **Gitleaks intercepts the commit immediately** and blocks it before reaching Git history.
+
+### Scenario D: Auditing and Updating Dependencies (With Pinning)
+1. Periodically or on-demand, say: *"Run a dependency audit and tell me what needs updating."*
+2. **AI Behavior:** The AI runs `harness audit`, identifies outdated/vulnerable packages, and presents an **Upgrade Proposal Report** (Package, Current, Target, Reason, Affected Files).
+3. If you say: *"Update package A, but keep package B at version 2.1 (pinned) because v3 breaks our custom serializer"*, the AI obeys, skips package B, updates package A, **executes the unit/integration tests covering package A**, and commits atomically: `chore(deps): update package A and verify compatibility`.
 
 ---
 

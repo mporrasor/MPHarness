@@ -31,4 +31,9 @@ You must keep `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md` updated in real-
 - **Committing / Security / Branching?** -> Governed by MPHarness (Gitleaks, Pre-commit, OWASP).
 - **Zero Double-Bookkeeping:** Micro-tasks live in the active tool's files; root `TASKS.md` records macro phase milestones. NEVER duplicate checklists across files.
 
+## 7. Dependency Audits & Selective Pinning
+- When running `harness audit` or updating dependencies, ALWAYS present an Upgrade Proposal Report (Package, Current, Target, Reason, Affected Files).
+- You MUST ask for user approval and pinning decisions BEFORE modifying packages.
+- Always run tests on affected modules before committing. Discard any updates the user rejects/pins.
+
 **If you fail to follow these rules, the built-in mechanical Git hooks (branch protection & Gitleaks) will block your commits.**

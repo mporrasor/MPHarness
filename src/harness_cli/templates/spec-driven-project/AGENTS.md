@@ -69,5 +69,19 @@ To ensure simplicity and eliminate document duplication or confusion, you MUST a
    - **Comprehensive Verification:** After committing, you MUST perform exhaustive verification. This includes: 1) Proving that the newly introduced harness rules are actively enforced. 2) Running all necessary tests (Unit, Integration, E2E, and whatever is required) to validate correct functioning according to the entire governance, guaranteeing that all pre-existing functionalities and processes remain 100% intact.
    - **Rollback:** If verification fails and cannot be fixed quickly, perform a rollback (e.g., revert the dedicated commit) and inform the user.
    - Finally, delete the `.harness/updates/` folder.
+9. **Dependency & Vulnerability Upgrade Protocol (Approval & Pinning First):**
+   - **Periodic Audit Suggestion:** At the start of a major phase/sprint, or if 7+ days have elapsed since the last audit in `TRACKING.md`, run or suggest running `harness audit`.
+   - **Pre-Upgrade Proposal Report (MANDATORY BEFORE MODIFYING PACKAGES):**
+     You are STRICTLY FORBIDDEN from upgrading any dependency automatically. You MUST present a structured proposal table to the user:
+     | Package | Current Version | Target Version | Reason (CVE / Outdated) | Files Consuming Package | Risk Level |
+     You MUST explicitly ask: *"Which of these upgrades do you approve? If any package must be kept at its current version (pinned) for stability, please indicate it so I can discard that update."*
+   - **Selective Execution & Package Pinning:**
+     Update ONLY the packages explicitly approved by the user. Discard any updates the user rejects, and record pinned packages in `CONSTITUTION.md` or `TRACKING.md` so future audits respect the decision.
+   - **Targeted Regression Verification (Test & Validate):**
+     Immediately after updating approved packages, you MUST execute the specific unit, integration, and UI tests for all modules importing or consuming those packages. Verify that no breaking API changes or regressions were introduced.
+   - **Dedicated Atomic Commit:**
+     Commit the updates and any minor compatibility adjustments in a dedicated commit: `chore(deps): upgrade <package(s)> to <version(s)> and verify compatibility`.
+   - **Auto-Rollback on Regression:**
+     If verification fails due to incompatible breaking changes in the upgraded version that cannot be resolved cleanly, immediately roll back to the previous working version and notify the user.
 
 > **Note to AI:** Reply with "Harness loaded and acknowledged" if you read this file at the start of a session.

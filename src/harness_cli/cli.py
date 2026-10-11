@@ -301,5 +301,107 @@ def tools(dir):
 
     console.print("\n[bold blue]Dispatch Rule:[/bold blue] AI automatically routes New Features -> SpecKit, Modifications -> OpenSpec. Zero file collisions or duplicated checklists.\n")
 
+@main.command()
+@click.option('--dir', default='.', help='Directory to audit.')
+def audit(dir):
+    """Audit project dependencies for vulnerabilities and outdated versions (NuGet, npm, pip/uv)."""
+    target_dir = Path(dir).resolve()
+    console.print("\n[bold cyan]=== MPHarness Dependency & Vulnerability Audit ===[/bold cyan]\n")
+    
+    import subprocess
+    found_stack = False
+
+    # 1. .NET / NuGet Check
+    dotnet_files = list(target_dir.glob("*.sln")) + list(target_dir.glob("*.csproj"))
+    if dotnet_files:
+        found_stack = True
+        console.print("[bold green][+] .NET / NuGet Project Detected[/bold green]")
+        if shutil.which("dotnet"):
+            console.print("  * Checking for vulnerable packages (dotnet list package --vulnerable)...")
+            try:
+                res_v = subprocess.run(["dotnet", "list", "package", "--vulnerable"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                out_v = res_v.stdout.strip()
+                if out_v:
+                    console.print(f"    {out_v}")
+                else:
+                    console.print("    [green]No known vulnerabilities reported by NuGet.[/green]")
+            except Exception as e:
+                console.print(f"    [red]Error running dotnet list --vulnerable: {e}[/red]")
+                
+            console.print("\n  * Checking for outdated packages (dotnet list package --outdated)...")
+            try:
+                res_o = subprocess.run(["dotnet", "list", "package", "--outdated"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                out_o = res_o.stdout.strip()
+                if out_o:
+                    console.print(f"    {out_o}")
+                else:
+                    console.print("    [green]All NuGet packages are up to date.[/green]")
+            except Exception as e:
+                console.print(f"    [red]Error running dotnet list --outdated: {e}[/red]")
+        else:
+            console.print("  [yellow]dotnet CLI not found on PATH.[/yellow]")
+
+    # 2. Node.js / npm / pnpm / yarn Check
+    package_json = target_dir / "package.json"
+    if package_json.exists():
+        found_stack = True
+        console.print("\n[bold green][+] Node.js Project Detected (package.json)[/bold green]")
+        pm = "pnpm" if (target_dir / "pnpm-lock.yaml").exists() else ("yarn" if (target_dir / "yarn.lock").exists() else "npm")
+        if shutil.which(pm) or shutil.which(f"{pm}.cmd"):
+            console.print(f"  * Checking for security vulnerabilities ({pm} audit)...")
+            try:
+                res_a = subprocess.run(f"{pm} audit", cwd=target_dir, capture_output=True, text=True, shell=True)
+                out_a = res_a.stdout.strip() or res_a.stderr.strip()
+                if out_a:
+                    console.print(f"    {out_a[:2000]}")
+                else:
+                    console.print("    [green]No known vulnerabilities found.[/green]")
+            except Exception as e:
+                console.print(f"    [red]Error running {pm} audit: {e}[/red]")
+                
+            console.print(f"\n  * Checking for outdated dependencies ({pm} outdated)...")
+            try:
+                res_o = subprocess.run(f"{pm} outdated", cwd=target_dir, capture_output=True, text=True, shell=True)
+                out_o = res_o.stdout.strip()
+                if out_o:
+                    console.print(f"    {out_o}")
+                else:
+                    console.print(f"    [green]All packages are up to date according to {pm}.[/green]")
+            except Exception as e:
+                console.print(f"    [red]Error running {pm} outdated: {e}[/red]")
+        else:
+            console.print(f"  [yellow]{pm} CLI not found on PATH.[/yellow]")
+
+    # 3. Python Check
+    pyproject = target_dir / "pyproject.toml"
+    requirements = target_dir / "requirements.txt"
+    if pyproject.exists() or requirements.exists():
+        found_stack = True
+        console.print("\n[bold green][+] Python Project Detected[/bold green]")
+        if shutil.which("pip-audit") or shutil.which("pip-audit.exe"):
+            console.print("  * Running pip-audit for CVE vulnerabilities...")
+            try:
+                res_p = subprocess.run(["pip-audit"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                console.print(f"    {res_p.stdout.strip() or 'No known vulnerabilities found.'}")
+            except Exception as e:
+                console.print(f"    [red]Error: {e}[/red]")
+        elif shutil.which("uv") or shutil.which("uv.exe"):
+            console.print("  * Checking outdated packages with uv pip list --outdated...")
+            try:
+                res_u = subprocess.run(["uv", "pip", "list", "--outdated"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                console.print(f"    {res_u.stdout.strip() or 'All packages up to date.'}")
+            except Exception as e:
+                console.print(f"    [red]Error: {e}[/red]")
+        else:
+            console.print("  [yellow]Install 'pip-audit' (uv tool install pip-audit) for CVE scanning.[/yellow]")
+
+    if not found_stack:
+        console.print("[yellow]No supported package manifests found in directory.[/yellow]")
+
+    console.print("\n[bold blue]MPHarness Pre-Upgrade Protocol:[/bold blue]")
+    console.print("  1. AI MUST present an Upgrade Proposal Report (Package, Current, Target, Reason, Affected Files).")
+    console.print("  2. User can approve or reject specific packages (pinning).")
+    console.print("  3. AI updates ONLY approved packages and MUST run tests on affected modules before committing.\n")
+
 if __name__ == "__main__":
     main()
