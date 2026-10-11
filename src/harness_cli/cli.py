@@ -54,7 +54,31 @@ def init(dir):
                 shutil.copy(cursorrules_dest, alias_dest)
                 console.print(f"[blue]Created IDE rule alias:[/blue] {alias}")
 
-    # Install Mechanical Git Hook (Prevent commits to main)
+    # Auto-protect .gitignore against secrets and private documentation
+    gitignore_path = target_dir / ".gitignore"
+    mandatory_ignores = [
+        ".env",
+        ".env.*",
+        "*.env",
+        "*.pem",
+        "*.key",
+        "secrets.json",
+        "credentials.json",
+        "/docs/",
+        ".harness/updates/",
+    ]
+    existing_gitignore = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    missing_ignores = [entry for entry in mandatory_ignores if entry not in existing_gitignore]
+    if missing_ignores:
+        with open(gitignore_path, "a", encoding="utf-8", newline="\n") as f:
+            if existing_gitignore and not existing_gitignore.endswith("\n"):
+                f.write("\n")
+            f.write("\n# Security & Secrets Prevention (Enforced by MPHarness)\n")
+            for entry in missing_ignores:
+                f.write(f"{entry}\n")
+        console.print("[bold green]Enhanced .gitignore with secret prevention and /docs/ privacy rules.[/bold green]")
+
+    # Install Mechanical Git Hook (Prevent commits to main + Gitleaks Secret Scanning)
     git_dir = target_dir / ".git"
     if git_dir.exists():
         hooks_dir = git_dir / "hooks"
@@ -63,12 +87,39 @@ def init(dir):
         
         pre_commit_path = hooks_dir / "pre-commit"
         hook_script = """#!/bin/sh
-branch="$(git rev-parse --abbrev-ref HEAD)"
+# MPHarness Mechanical Pre-Commit Hook
+
+# 1. Block direct commits to main/master
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
   echo "🚫 [MPHarness] Direct commits to the '$branch' branch are STRICTLY FORBIDDEN."
   echo "👉 Please create a semantic branch (e.g., 'feat/...', 'bugfix/...') and commit there."
   exit 1
 fi
+
+# 2. Secret Leak Prevention (Gitleaks + Fallback)
+echo "🔒 [MPHarness] Inspecting staged changes for leaked secrets..."
+
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks protect --staged --verbose --redact; then
+    echo ""
+    echo "🚨 [MPHarness] COMMIT BLOCKED: Gitleaks detected one or more secrets in your staged changes!"
+    echo "👉 Remove the secret(s), unstage the file with 'git restore --staged <file>', or configure .gitleaks.toml."
+    exit 1
+  fi
+else
+  STAGED_DIFF="$(git diff --cached -U0 --diff-filter=ACMR 2>/dev/null)"
+  if echo "$STAGED_DIFF" | grep -Ei -q '(\bBEGIN [A-Z]+ PRIVATE KEY\b|sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|AIza[0-9A-Za-z\\-_]{35}|xox[baprs]-[0-9a-zA-Z]{10,})'; then
+    echo ""
+    echo "🚨 [MPHarness] COMMIT BLOCKED: High-risk secret or private key pattern detected in staged changes!"
+    echo "👉 Please remove the secret before committing."
+    exit 1
+  fi
+  echo "⚠️ [MPHarness] Gitleaks not found in PATH. Run 'winget install Gitleaks.Gitleaks' or 'brew install gitleaks' for full 160+ detector coverage."
+fi
+
+echo "✅ [MPHarness] Pre-commit security verification passed."
+exit 0
 """
         with open(pre_commit_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(hook_script)
@@ -77,7 +128,7 @@ fi
         if os.name == 'posix':
             os.chmod(pre_commit_path, 0o755)
             
-        console.print("[bold green]Installed mechanical git hook (pre-commit) to protect main/master branch.[/bold green]")
+        console.print("[bold green]Installed mechanical git hook (pre-commit) with Gitleaks secret protection & branch shielding.[/bold green]")
     
     console.print("\n[bold green]Harness initialized successfully![/bold green]")
     console.print("[bold yellow]IMPORTANT:[/bold yellow] Place any initial requirements, analysis files, or UI prototypes inside the [bold]/docs[/bold] folder.")

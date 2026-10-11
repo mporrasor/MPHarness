@@ -21,4 +21,8 @@ Before writing a single line of code in a new session or project:
 ## 4. Living Documentation
 You must keep `TASKS.md`, `TRACKING.md`, and `SPECIFICATION.md` updated in real-time as you progress. This is not optional.
 
-**If you fail to follow these rules, the built-in mechanical Git hooks will block your commits and you will generate errors.**
+## 5. Security & Zero Secrets
+- NEVER commit secrets, API keys, private tokens, passwords, or `.env` files.
+- The repository enforces mechanical pre-commit scanning with Gitleaks. If you stage any credentials, the hook will abort the commit.
+
+**If you fail to follow these rules, the built-in mechanical Git hooks (branch protection & Gitleaks) will block your commits.**
