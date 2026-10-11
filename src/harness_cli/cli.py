@@ -100,8 +100,17 @@ fi
 # 2. Secret Leak Prevention (Gitleaks + Fallback)
 echo "🔒 [MPHarness] Inspecting staged changes for leaked secrets..."
 
+GITLEAKS_CMD=""
 if command -v gitleaks >/dev/null 2>&1; then
-  if ! gitleaks protect --staged --verbose --redact; then
+  GITLEAKS_CMD="gitleaks"
+elif [ -n "$LOCALAPPDATA" ] && [ -f "$LOCALAPPDATA/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe/gitleaks.exe" ]; then
+  GITLEAKS_CMD="$LOCALAPPDATA/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe/gitleaks.exe"
+elif [ -n "$LOCALAPPDATA" ] && [ -f "$LOCALAPPDATA/Microsoft/WinGet/Links/gitleaks.exe" ]; then
+  GITLEAKS_CMD="$LOCALAPPDATA/Microsoft/WinGet/Links/gitleaks.exe"
+fi
+
+if [ -n "$GITLEAKS_CMD" ]; then
+  if ! "$GITLEAKS_CMD" protect --staged --verbose --redact; then
     echo ""
     echo "🚨 [MPHarness] COMMIT BLOCKED: Gitleaks detected one or more secrets in your staged changes!"
     echo "👉 Remove the secret(s), unstage the file with 'git restore --staged <file>', or configure .gitleaks.toml."
