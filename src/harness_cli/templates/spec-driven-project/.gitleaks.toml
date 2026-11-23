@@ -9,7 +9,6 @@ useDefault = true
 description = "Standard allowlist for non-production documentation and templates"
 paths = [
     '''(^|/)docs/''',
-    '''(^|/)archive/''',
     '''(^|/)\.gitleaks\.toml$''',
     '''(^|/)package-lock\.json$''',
     '''(^|/)pnpm-lock\.yaml$''',
