@@ -159,8 +159,9 @@ From the repository root:
 
 Or install globally with:
 ```bash
-uv tool install -e C:\Personal\Dev\MPHarness
+uv tool install -e <path-to-MPHarness-clone>
 ```
+The MCP client helper is optional: install it with the `mcp` extra (`uv pip install -e ".[mcp]"`).
 
 ### 2. Initializing a Project
 Navigate to your project directory (new or existing) and run:
@@ -172,7 +173,7 @@ This automatically:
 * Creates `.cursorrules`, `.windsurfrules`, and `.clinerules` for prompt injection.
 * Configures `.gitleaks.toml` inheriting 160+ secret detection rules.
 * Auto-populates `.gitignore` with secret exclusions (`.env*`, `*.pem`, `*.key`, `secrets.json`, `/docs/`).
-* Installs the mechanical `pre-commit` Git hook protecting `main` and running Gitleaks.
+* Installs the mechanical `pre-commit` Git hook protecting `main` and running Gitleaks (works in worktrees and submodules). An existing non-MPHarness hook is preserved as `pre-commit.local` and still runs after MPHarness checks. If `core.hooksPath` is set (husky, lefthook…), the hook is not installed; add Gitleaks to that hook manager instead.
 
 ### 3. Inspecting Ecosystem Tools
 To verify active tools and routing assignments:
@@ -223,8 +224,11 @@ harness check
 ### 6. Updating the Harness
 Pull upstream improvements from GitHub safely into existing projects:
 ```bash
-harness update
+harness update                 # templates from the tag matching the installed version (e.g. v0.1.0)
+harness update --ref v0.2.0    # a specific release tag or commit SHA
 ```
+Templates are fetched from a pinned tag or commit, never from a moving branch: `--ref main` is refused unless you also pass `--allow-branch`. If the ref cannot be fetched, the templates bundled with the installed CLI are used. `.windsurfrules` and `.clinerules` are updated together with `.cursorrules`.
+
 *(Templates are downloaded to `.harness/updates/`. Your AI Agent is instructed to inspect them, generate a Pre-Merge Impact Analysis Report, and ask for permission before applying.)*
 
 ---
