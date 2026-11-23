@@ -1,12 +1,46 @@
 import click
+import filecmp
 import os
 import shutil
+import subprocess
+import sys
+from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from rich.console import Console
 
 console = Console()
 
 TEMPLATE_DIR = Path(__file__).parent / "templates" / "spec-driven-project"
+RULE_ALIASES = [".windsurfrules", ".clinerules"]
+HOOK_MARKER = "# MPHarness Mechanical Pre-Commit Hook"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/mporrasor/MPHarness"
+TEMPLATE_REPO_PATH = "src/harness_cli/templates/spec-driven-project/"
+
+
+def _default_template_ref():
+    try:
+        return f"v{package_version('ai-harness-cli')}"
+    except PackageNotFoundError:
+        return "v0.1.0"
+
+
+def _run_tool(args, cwd):
+    """Run an external CLI without a shell, resolving Windows .cmd/.bat shims."""
+    exe = shutil.which(args[0])
+    if exe is None:
+        raise FileNotFoundError(f"{args[0]} not found on PATH")
+    cmd = [exe, *args[1:]]
+    if os.name == "nt" and exe.lower().endswith((".cmd", ".bat")):
+        # Batch shims (npm.cmd, pnpm.cmd...) can only be executed through cmd.exe.
+        return subprocess.run(subprocess.list2cmdline(cmd), cwd=cwd, capture_output=True, text=True, shell=True)
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
+
+def _git_output(args, cwd):
+    if shutil.which("git") is None:
+        return None
+    res = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    return res.stdout.strip() if res.returncode == 0 else None
 
 @click.group()
 def main():
@@ -79,16 +113,44 @@ def init(dir):
         console.print("[bold green]Enhanced .gitignore with secret prevention and /docs/ privacy rules.[/bold green]")
 
     # Install Mechanical Git Hook (Prevent commits to main + Gitleaks Secret Scanning)
-    git_dir = target_dir / ".git"
-    if git_dir.exists():
-        hooks_dir = git_dir / "hooks"
-        if not hooks_dir.exists():
-            hooks_dir.mkdir(parents=True)
-        
-        pre_commit_path = hooks_dir / "pre-commit"
-        hook_script = """#!/bin/sh
-# MPHarness Mechanical Pre-Commit Hook
+    _install_pre_commit_hook(target_dir)
 
+    console.print("\n[bold green]Harness initialized successfully![/bold green]")
+    console.print("[bold yellow]IMPORTANT:[/bold yellow] Place any initial requirements, analysis files, or UI prototypes inside the [bold]/docs[/bold] folder.")
+    console.print("You can now start editing SPECIFICATION.md, or invite your AI to begin.")
+
+
+def _install_pre_commit_hook(target_dir):
+    # .git is a directory in normal clones but a file in worktrees and submodules.
+    if not (target_dir / ".git").exists():
+        return
+
+    custom_hooks_path = _git_output(["config", "--get", "core.hooksPath"], target_dir)
+    if custom_hooks_path:
+        console.print(f"[yellow]core.hooksPath is set to '{custom_hooks_path}' (husky, lefthook, etc.). "
+                      "Skipping MPHarness hook install to avoid clobbering it; add Gitleaks to that hook manager instead.[/yellow]")
+        return
+
+    hooks_rel = _git_output(["rev-parse", "--git-path", "hooks"], target_dir)
+    if hooks_rel is None:
+        console.print("[yellow]Could not resolve the git hooks directory (is git installed?). Pre-commit hook not installed.[/yellow]")
+        return
+    hooks_dir = Path(hooks_rel)
+    if not hooks_dir.is_absolute():
+        hooks_dir = target_dir / hooks_dir
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    pre_commit_path = hooks_dir / "pre-commit"
+    chained_path = hooks_dir / "pre-commit.local"
+    if pre_commit_path.exists() and HOOK_MARKER not in pre_commit_path.read_text(encoding="utf-8", errors="ignore"):
+        if chained_path.exists():
+            console.print(f"[red]Existing pre-commit hook found and {chained_path.name} already exists. "
+                          "Pre-commit hook not installed; merge them manually.[/red]")
+            return
+        pre_commit_path.rename(chained_path)
+        console.print(f"[yellow]Existing pre-commit hook preserved as {chained_path.name}; MPHarness will run it after its own checks.[/yellow]")
+
+    hook_script = "#!/bin/sh\n" + HOOK_MARKER + "\n" + """
 # 1. Block direct commits to main/master
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
@@ -128,20 +190,21 @@ else
 fi
 
 echo "✅ [MPHarness] Pre-commit security verification passed."
+
+# 3. Run the project's previous pre-commit hook, preserved by 'harness init'
+LOCAL_HOOK="$(dirname "$0")/pre-commit.local"
+if [ -f "$LOCAL_HOOK" ]; then
+  "$LOCAL_HOOK" "$@" || exit $?
+fi
 exit 0
 """
-        with open(pre_commit_path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(hook_script)
-        
-        # Ensure it's executable on unix
-        if os.name == 'posix':
-            os.chmod(pre_commit_path, 0o755)
-            
-        console.print("[bold green]Installed mechanical git hook (pre-commit) with Gitleaks secret protection & branch shielding.[/bold green]")
-    
-    console.print("\n[bold green]Harness initialized successfully![/bold green]")
-    console.print("[bold yellow]IMPORTANT:[/bold yellow] Place any initial requirements, analysis files, or UI prototypes inside the [bold]/docs[/bold] folder.")
-    console.print("You can now start editing SPECIFICATION.md, or invite your AI to begin.")
+    with open(pre_commit_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(hook_script)
+
+    if os.name == 'posix':
+        os.chmod(pre_commit_path, 0o755)
+
+    console.print("[bold green]Installed mechanical git hook (pre-commit) with Gitleaks secret protection & branch shielding.[/bold green]")
 
 @main.command()
 @click.option('--dir', default='.', help='Directory to check.')
@@ -167,89 +230,98 @@ def check(dir):
         console.print("[bold red]Harness check failed![/bold red]")
         console.print(f"Missing required specification files: {', '.join(missing)}")
         console.print("Run 'harness init' to generate them.")
-        exit(1)
+        sys.exit(1)
     else:
         console.print("[bold green]All harness specification files are present.[/bold green]")
 
 @main.command()
 @click.option('--dir', default='.', help='Directory to update.')
 @click.option('--auto', is_flag=True, help='Run non-interactively, bypassing prompts and defaulting to Keep.')
-def update(dir, auto):
+@click.option('--ref', default=None,
+              help='Git tag or commit SHA of MPHarness to fetch templates from. Defaults to the tag of the installed version (e.g. v0.1.0). Mutable branches like "main" are rejected unless --allow-branch is set.')
+@click.option('--allow-branch', is_flag=True, help='Allow fetching templates from a mutable branch ref such as "main".')
+def update(dir, auto, ref, allow_branch):
     """Update harness templates without overwriting custom project rules."""
+    import tempfile
+    import urllib.request
+
     target_dir = Path(dir).resolve()
-    
+
     if not (target_dir / ".harness").exists():
         console.print("[yellow]Warning: No .harness directory found. Are you sure this project is initialized?[/yellow]")
         console.print("Run 'harness init' instead if this is a new project.")
-    
+
+    ref = ref or _default_template_ref()
+    if ref in ("main", "master", "HEAD") and not allow_branch:
+        console.print(f"[red]Refusing to fetch templates from mutable branch '{ref}'. Pin a tag or commit SHA, or pass --allow-branch.[/red]")
+        sys.exit(1)
+
     updates_dir = target_dir / ".harness" / "updates"
     updates_found = False
-    
-    import filecmp
-    import urllib.request
-    import tempfile
-    
-    GITHUB_RAW_URL = "https://raw.githubusercontent.com/mporrasor/MPHarness/main/src/harness_cli/templates/spec-driven-project/"
+    base_url = f"{GITHUB_RAW_BASE}/{ref}/{TEMPLATE_REPO_PATH}"
     template_files = [f.name for f in TEMPLATE_DIR.iterdir() if f.is_file()]
-    
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
         use_remote = True
-        
-        console.print("[cyan]Checking for updates from GitHub...[/cyan]")
-        
+
+        console.print(f"[cyan]Checking for template updates from GitHub (ref: {ref})...[/cyan]")
+
         try:
             if template_files:
-                urllib.request.urlopen(GITHUB_RAW_URL + template_files[0], timeout=5)
-        except Exception as e:
+                urllib.request.urlopen(base_url + template_files[0], timeout=5)
+        except Exception:
             use_remote = False
-            console.print(f"[yellow]Could not reach GitHub. Falling back to local templates.[/yellow]")
-            
+            console.print(f"[yellow]Could not fetch templates for ref '{ref}' (offline, or the tag does not exist). Falling back to the templates bundled with this CLI.[/yellow]")
+
         for filename in template_files:
-            local_template_path = TEMPLATE_DIR / filename
-            
+            source_file = TEMPLATE_DIR / filename
             if use_remote:
-                remote_url = GITHUB_RAW_URL + filename
                 temp_file_path = temp_dir_path / filename
                 try:
-                    urllib.request.urlretrieve(remote_url, temp_file_path)
+                    urllib.request.urlretrieve(base_url + filename, temp_file_path)
                     source_file = temp_file_path
-                except Exception as e:
+                except Exception:
                     console.print(f"[yellow]Warning: Failed to download {filename} from GitHub. Using local version.[/yellow]")
-                    source_file = local_template_path
-            else:
-                source_file = local_template_path
 
-            dest = target_dir / filename
-            if not dest.exists():
-                shutil.copy(source_file, dest)
-                console.print(f"[green]Added missing template:[/green] {filename}")
-            else:
-                if not filecmp.cmp(source_file, dest, shallow=False):
-                    if auto:
-                        choice = 'K'
-                    else:
-                        console.print(f"\n[bold yellow]Attention:[/bold yellow] A new version of [bold]{filename}[/bold] is available, but your local file may have custom changes.")
-                        choice = click.prompt("Do you want to (O)verwrite your local file or (K)eep it and prepare a merge?", type=click.Choice(['O', 'K'], case_sensitive=False), default='K')
-                    
-                    if choice.upper() == 'O':
-                        shutil.copy(source_file, dest)
-                        console.print(f"[red]Overwrote local file:[/red] {filename}")
-                    else:
-                        if not updates_dir.exists():
-                            updates_dir.mkdir(parents=True)
-                        
-                        update_dest = updates_dir / filename
-                        shutil.copy(source_file, update_dest)
-                        updates_found = True
-                        console.print(f"[blue]Update saved for manual/AI merge:[/blue] .harness/updates/{filename}")
-                
+            # IDE rule aliases are copies of .cursorrules and must stay in sync with it.
+            dest_names = [filename] + (RULE_ALIASES if filename == ".cursorrules" else [])
+            for dest_name in dest_names:
+                if _apply_template_update(source_file, target_dir / dest_name, updates_dir, auto):
+                    updates_found = True
+
     if updates_found:
         console.print("\n[bold yellow]Updates downloaded successfully![/bold yellow]")
         console.print("The updated templates have been safely stored in [bold].harness/updates/[/bold].")
         console.print("Your AI Agent is instructed to automatically detect these files, merge the new directives while respecting your custom rules, and clean up the folder the next time it reads the project. No manual prompting required.")
     else:
         console.print("\n[bold green]Your harness templates are up to date.[/bold green]")
+
+
+def _apply_template_update(source_file, dest, updates_dir, auto):
+    """Copy a template into the project, or stage it for merge if the local copy differs. Returns True if staged."""
+    if not dest.exists():
+        shutil.copy(source_file, dest)
+        console.print(f"[green]Added missing template:[/green] {dest.name}")
+        return False
+    if filecmp.cmp(source_file, dest, shallow=False):
+        return False
+
+    if auto:
+        choice = 'K'
+    else:
+        console.print(f"\n[bold yellow]Attention:[/bold yellow] A new version of [bold]{dest.name}[/bold] is available, but your local file may have custom changes.")
+        choice = click.prompt("Do you want to (O)verwrite your local file or (K)eep it and prepare a merge?", type=click.Choice(['O', 'K'], case_sensitive=False), default='K')
+
+    if choice.upper() == 'O':
+        shutil.copy(source_file, dest)
+        console.print(f"[red]Overwrote local file:[/red] {dest.name}")
+        return False
+
+    updates_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(source_file, updates_dir / dest.name)
+    console.print(f"[blue]Update saved for manual/AI merge:[/blue] .harness/updates/{dest.name}")
+    return True
 
 @main.command()
 @click.option('--dir', default='.', help='Directory to inspect.')
@@ -264,14 +336,16 @@ def tools(dir):
     console.print("  * Scope: OWASP Security, Gitleaks Pre-commit Hook, Branch Shielding, Context Drift Protection")
     
     # 2. Gitleaks
-    import shutil
     gitleaks_found = shutil.which("gitleaks") is not None
     if not gitleaks_found:
         local_app = os.environ.get("LOCALAPPDATA", "")
         if local_app:
-            winget_path = Path(local_app) / "Microsoft" / "WinGet" / "Packages" / "Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe" / "gitleaks.exe"
-            gitleaks_found = winget_path.exists()
-            
+            winget_dir = Path(local_app) / "Microsoft" / "WinGet"
+            gitleaks_found = any(p.exists() for p in [
+                winget_dir / "Packages" / "Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe" / "gitleaks.exe",
+                winget_dir / "Links" / "gitleaks.exe",
+            ])
+
     if gitleaks_found:
         console.print("[bold green][+] Gitleaks:[/bold green] [green]INSTALLED & INTEGRATED[/green]")
         console.print("  * Scope: Mechanical secret leak blocking in pre-commit hook")
@@ -307,8 +381,7 @@ def audit(dir):
     """Audit project dependencies for vulnerabilities and outdated versions (NuGet, npm, pip/uv)."""
     target_dir = Path(dir).resolve()
     console.print("\n[bold cyan]=== MPHarness Dependency & Vulnerability Audit ===[/bold cyan]\n")
-    
-    import subprocess
+
     found_stack = False
 
     # 1. .NET / NuGet Check
@@ -319,7 +392,7 @@ def audit(dir):
         if shutil.which("dotnet"):
             console.print("  * Checking for vulnerable packages (dotnet list package --vulnerable)...")
             try:
-                res_v = subprocess.run(["dotnet", "list", "package", "--vulnerable"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                res_v = _run_tool(["dotnet", "list", "package", "--vulnerable"], target_dir)
                 out_v = res_v.stdout.strip()
                 if out_v:
                     console.print(f"    {out_v}")
@@ -330,7 +403,7 @@ def audit(dir):
                 
             console.print("\n  * Checking for outdated packages (dotnet list package --outdated)...")
             try:
-                res_o = subprocess.run(["dotnet", "list", "package", "--outdated"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                res_o = _run_tool(["dotnet", "list", "package", "--outdated"], target_dir)
                 out_o = res_o.stdout.strip()
                 if out_o:
                     console.print(f"    {out_o}")
@@ -347,10 +420,10 @@ def audit(dir):
         found_stack = True
         console.print("\n[bold green][+] Node.js Project Detected (package.json)[/bold green]")
         pm = "pnpm" if (target_dir / "pnpm-lock.yaml").exists() else ("yarn" if (target_dir / "yarn.lock").exists() else "npm")
-        if shutil.which(pm) or shutil.which(f"{pm}.cmd"):
+        if shutil.which(pm):
             console.print(f"  * Checking for security vulnerabilities ({pm} audit)...")
             try:
-                res_a = subprocess.run(f"{pm} audit", cwd=target_dir, capture_output=True, text=True, shell=True)
+                res_a = _run_tool([pm, "audit"], target_dir)
                 out_a = res_a.stdout.strip() or res_a.stderr.strip()
                 if out_a:
                     console.print(f"    {out_a[:2000]}")
@@ -361,7 +434,7 @@ def audit(dir):
                 
             console.print(f"\n  * Checking for outdated dependencies ({pm} outdated)...")
             try:
-                res_o = subprocess.run(f"{pm} outdated", cwd=target_dir, capture_output=True, text=True, shell=True)
+                res_o = _run_tool([pm, "outdated"], target_dir)
                 out_o = res_o.stdout.strip()
                 if out_o:
                     console.print(f"    {out_o}")
@@ -378,17 +451,22 @@ def audit(dir):
     if pyproject.exists() or requirements.exists():
         found_stack = True
         console.print("\n[bold green][+] Python Project Detected[/bold green]")
-        if shutil.which("pip-audit") or shutil.which("pip-audit.exe"):
-            console.print("  * Running pip-audit for CVE vulnerabilities...")
+        if shutil.which("pip-audit"):
+            # Audit the target project's declared dependencies, not the environment running this CLI.
+            if requirements.exists():
+                pip_audit_args = ["pip-audit", "-r", str(requirements)]
+            else:
+                pip_audit_args = ["pip-audit", str(target_dir)]
+            console.print(f"  * Running {' '.join(pip_audit_args[:2])} for CVE vulnerabilities...")
             try:
-                res_p = subprocess.run(["pip-audit"], cwd=target_dir, capture_output=True, text=True, shell=True)
-                console.print(f"    {res_p.stdout.strip() or 'No known vulnerabilities found.'}")
+                res_p = _run_tool(pip_audit_args, target_dir)
+                console.print(f"    {res_p.stdout.strip() or res_p.stderr.strip() or 'No known vulnerabilities found.'}")
             except Exception as e:
                 console.print(f"    [red]Error: {e}[/red]")
-        elif shutil.which("uv") or shutil.which("uv.exe"):
+        elif shutil.which("uv"):
             console.print("  * Checking outdated packages with uv pip list --outdated...")
             try:
-                res_u = subprocess.run(["uv", "pip", "list", "--outdated"], cwd=target_dir, capture_output=True, text=True, shell=True)
+                res_u = _run_tool(["uv", "pip", "list", "--outdated"], target_dir)
                 console.print(f"    {res_u.stdout.strip() or 'All packages up to date.'}")
             except Exception as e:
                 console.print(f"    [red]Error: {e}[/red]")
