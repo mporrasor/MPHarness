@@ -12,12 +12,12 @@ PLANNERS = ("architect", "speckit", "openspec", "none")
 
 DEFAULTS = {
     "version": 1,
-    "language": "es",
     "project": {
         "repository": "",
         "stage": "new",
         "planner": "speckit",
     },
+    "agents": ["claude", "antigravity"],
     "branches": {"protected": ["main", "master"]},
     "rules": {
         "block_secrets_in_code": True,
@@ -68,10 +68,19 @@ class Policy:
     root: Path
     data: dict = field(default_factory=lambda: copy.deepcopy(DEFAULTS))
     found: bool = False
+    error: str = ""
 
     @property
-    def language(self):
-        return self.data.get("language", "es")
+    def agents(self):
+        return list(self.data.get("agents") or [])
+
+    @property
+    def repository(self):
+        return (self.data["project"].get("repository") or "").strip()
+
+    @property
+    def planner(self):
+        return self.data["project"].get("planner") or "none"
 
     @property
     def protected_branches(self):
@@ -118,9 +127,12 @@ def load_policy(start):
         # A broken policy file must not silently disable the guardrails: fall back to strict defaults.
         try:
             loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
+        except yaml.YAMLError as exc:
             loaded = {}
+            policy.error = str(exc).splitlines()[0]
         if isinstance(loaded, dict):
             _merge(policy.data, loaded)
+        elif not policy.error:
+            policy.error = "the file must contain key: value settings"
         policy.found = True
     return policy

@@ -7,7 +7,6 @@
 #  After editing it, run:  harness doctor
 # ==================================================================
 version: 1
-language: en              # Message language: es | en
 
 project:
   repository: "__REPOSITORY__"   # GitHub repository (owner/name)
@@ -17,6 +16,8 @@ project:
                                  #   speckit   = GitHub Spec Kit: recommended for new projects
                                  #   openspec  = OpenSpec: recommended for existing code
                                  #   none      = no external tool
+
+agents: [__AGENTS__]   # AI tools protected by MPHarness guard hooks: claude (Claude Code), antigravity
 
 branches:
   protected: [main, master]      # Branches nobody commits to directly

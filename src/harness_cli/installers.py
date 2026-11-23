@@ -66,23 +66,49 @@ def install_antigravity(root):
     return path
 
 
-def claude_installed(root):
+def claude_guard_state(root):
+    """'ok', 'missing' (no settings file) or 'disabled' (file exists but the guard is gone or hooks are off)."""
     path = Path(root) / ".claude" / "settings.json"
+    if not path.exists():
+        return "missing"
     try:
         settings = _load_json(path)
     except ConfigError:
-        return False
-    return any(GUARD_MARKER in h.get("command", "")
-               for g in settings.get("hooks", {}).get("PreToolUse", []) for h in g.get("hooks", []))
+        return "disabled"
+    if settings.get("disableAllHooks"):
+        return "disabled"
+    present = any(GUARD_MARKER in h.get("command", "")
+                  for g in settings.get("hooks", {}).get("PreToolUse", []) for h in g.get("hooks", []))
+    return "ok" if present else "disabled"
+
+
+def antigravity_guard_state(root):
+    path = Path(root) / ".agents" / "hooks.json"
+    if not path.exists():
+        return "missing"
+    try:
+        hooks = _load_json(path)
+    except ConfigError:
+        return "disabled"
+    entry = hooks.get(ANTIGRAVITY_HOOK_NAME) or {}
+    enabled = entry.get("enabled", True) is not False and "PreToolUse" in entry
+    return "ok" if enabled else "disabled"
+
+
+def claude_installed(root):
+    return claude_guard_state(root) == "ok"
 
 
 def antigravity_installed(root):
-    try:
-        hooks = _load_json(Path(root) / ".agents" / "hooks.json")
-    except ConfigError:
-        return False
-    entry = hooks.get(ANTIGRAVITY_HOOK_NAME) or {}
-    return entry.get("enabled", True) is not False and "PreToolUse" in entry
+    return antigravity_guard_state(root) == "ok"
+
+
+GUARD_STATES = {
+    "claude": claude_guard_state,
+    "antigravity": antigravity_guard_state,
+}
+AGENT_LABELS = {"claude": "Claude Code", "antigravity": "Antigravity"}
+AGENT_CONFIG = {"claude": ".claude/settings.json", "antigravity": ".agents/hooks.json"}
 
 
 AGENTS = {

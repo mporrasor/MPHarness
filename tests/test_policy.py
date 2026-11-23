@@ -89,8 +89,12 @@ def test_remote_scripts_ask(policy, command):
     assert cmd(policy, command).verdict == ASK
 
 
-def test_agent_cannot_approve_plan(policy):
-    assert cmd(policy, "harness approve").verdict == DENY
+@pytest.mark.parametrize("command", [
+    "harness approve", "echo '{}' > .harness/approval.json", "cp x .harness/approval.json",
+    "Set-Content .harness\\approval.json '{}'",
+])
+def test_agent_cannot_approve_plan(policy, command):
+    assert cmd(policy, command).verdict == DENY
 
 
 def test_command_editing_governance_asks(policy):
@@ -185,10 +189,3 @@ def test_invalid_custom_regex_treated_literally(tmp_path):
 def test_broken_governance_file_falls_back_to_strict_defaults(tmp_path):
     p = _policy_with(tmp_path, "rules: [this is: not valid")
     assert cmd(p, "git push --force").verdict == DENY
-
-
-def test_messages_follow_language(tmp_path):
-    p = _policy_with(tmp_path, "language: en\n")
-    assert "Blocked" in cmd(p, "git push --force").reason
-    p_es = _policy_with(tmp_path, "language: es\n")
-    assert "Bloqueado" in cmd(p_es, "git push --force").reason

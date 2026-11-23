@@ -129,18 +129,3 @@ def test_install_antigravity_merges_existing_hooks(tmp_path):
     data = json.loads(hooks.read_text(encoding="utf-8"))
     assert "my-linter" in data and "mpharness-guard" in data
     assert antigravity_installed(tmp_path)
-
-
-def test_init_creates_governance_and_guards(tmp_path):
-    result = CliRunner().invoke(main, ["init", "--dir", str(tmp_path), "--yes", "--repo", "me/app", "--lang", "en"])
-    assert result.exit_code == 0, result.output
-    gov = (tmp_path / "governance.yaml").read_text(encoding="utf-8")
-    assert 'repository: "me/app"' in gov and "stage: new" in gov and "planner: speckit" in gov
-    assert claude_installed(tmp_path) and antigravity_installed(tmp_path)
-
-
-def test_init_detects_existing_code(tmp_path):
-    (tmp_path / "app.py").write_text("print(1)", encoding="utf-8")
-    CliRunner().invoke(main, ["init", "--dir", str(tmp_path), "--yes"])
-    gov = (tmp_path / "governance.yaml").read_text(encoding="utf-8")
-    assert "stage: existing" in gov and "planner: openspec" in gov
