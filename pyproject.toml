@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-harness-cli"
-version = "0.1.0"
-description = "A universal Spec-Driven Project Harness for AI Agents."
+version = "0.2.0"
+description = "Guardrails for building secure apps with AI coding agents (Claude Code, Antigravity)."
 authors = [
-    { name = "AI Assistant" }
+    { name = "mporrasor" }
 ]
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1.7",
@@ -28,6 +29,13 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 harness_cli = ["templates/*/*", "templates/*/.*"]
+
+[project.urls]
+Homepage = "https://github.com/mporrasor/MPHarness"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
 
 [dependency-groups]
 dev = [

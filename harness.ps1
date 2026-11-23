@@ -1,29 +1,23 @@
-# Bootstrap script for Windows (PowerShell)
+# MPHarness installer for Windows (PowerShell).
+# Installs uv (if missing) and the pinned MPHarness version as the global 'harness' command.
 $ErrorActionPreference = "Stop"
 
-Write-Host "Checking environment dependencies..." -ForegroundColor Cyan
+$Version = if ($env:MPHARNESS_VERSION) { $env:MPHARNESS_VERSION } else { "v0.2.0" }
 
-# 1. Check for uv (Python manager)
-if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
-    Write-Host "uv is not installed. Installing uv..." -ForegroundColor Yellow
-    Invoke-RestMethod -Uri https://astral.sh/uv/install.ps1 | Invoke-Expression
-    $env:PATH = "$HOME\.local\bin;" + $env:PATH
-} else {
-    Write-Host "uv is installed." -ForegroundColor Green
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing uv (Python tool manager)..."
+    powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
+    $env:PATH = "$HOME\.local\bin;$env:PATH"
 }
 
-# 2. Check for virtual environment
-if (!(Test-Path ".venv")) {
-    Write-Host "Setting up Python environment..." -ForegroundColor Yellow
-    uv venv .venv
-    uv pip install -e .
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "Git is required. Install it from https://git-scm.com (or: winget install Git.Git) and run this script again." -ForegroundColor Red
+    exit 1
 }
 
-# 3. Check for Git
-if (!(Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Host "Warning: Git is not installed. Some features might be limited." -ForegroundColor Red
-}
+Write-Host "Installing MPHarness $Version..."
+uv tool install --force "git+https://github.com/mporrasor/MPHarness@$Version"
+uv tool update-shell | Out-Null
 
-# Run the harness CLI
-Write-Host "Starting Harness..." -ForegroundColor Cyan
-uv run harness $args
+Write-Host ""
+Write-Host "Done. Open a new terminal, go to your project folder and run:  harness init" -ForegroundColor Green

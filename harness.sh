@@ -1,31 +1,24 @@
 #!/usr/bin/env bash
-# Bootstrap script for Mac/Linux
+# MPHarness installer for macOS / Linux.
+# Installs uv (if missing) and the pinned MPHarness version as the global 'harness' command.
+set -euo pipefail
 
-set -e
+VERSION="${MPHARNESS_VERSION:-v0.2.0}"
 
-echo "Checking environment dependencies..."
-
-# 1. Check for uv (Python manager)
-if ! command -v uv &> /dev/null; then
-    echo "uv is not installed. Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
-else
-    echo "uv is installed."
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Installing uv (Python tool manager)..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# 2. Check for virtual environment
-if [ ! -d ".venv" ]; then
-    echo "Setting up Python environment..."
-    uv venv .venv
-    uv pip install -e .
+if ! command -v git >/dev/null 2>&1; then
+  echo "Git is required. Install it from https://git-scm.com and run this script again." >&2
+  exit 1
 fi
 
-# 3. Check for Git
-if ! command -v git &> /dev/null; then
-    echo "Warning: Git is not installed. Some features might be limited."
-fi
+echo "Installing MPHarness $VERSION..."
+uv tool install --force "git+https://github.com/mporrasor/MPHarness@$VERSION"
+uv tool update-shell >/dev/null 2>&1 || true
 
-# Run the harness CLI
-echo "Starting Harness..."
-uv run harness "$@"
+echo
+echo "Done. Open a new terminal, go to your project folder and run:  harness init"
