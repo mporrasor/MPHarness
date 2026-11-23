@@ -1,16 +1,26 @@
 import click
 import filecmp
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from rich.console import Console
 
+from .adapters import ADAPTERS
+from .governance import APPROVAL_FILE, GOVERNANCE_FILE, PLANNERS, load_policy
+from .installers import AGENTS as AGENT_INSTALLERS, ConfigError
+from .messages import msg
+from .policy import DENY, Decision, current_branch, evaluate
+
 console = Console()
 
 TEMPLATE_DIR = Path(__file__).parent / "templates" / "spec-driven-project"
+GOVERNANCE_TEMPLATE_DIR = Path(__file__).parent / "templates" / "governance"
 RULE_ALIASES = [".windsurfrules", ".clinerules"]
 HOOK_MARKER = "# MPHarness Mechanical Pre-Commit Hook"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/mporrasor/MPHarness"
@@ -49,13 +59,23 @@ def main():
 
 @main.command()
 @click.option('--dir', default='.', help='Directory to initialize the harness.')
-def init(dir):
-    """Initialize a new spec-driven project."""
+@click.option('--repo', default=None, help='GitHub repository (owner/name). Detected from the git remote when omitted.')
+@click.option('--stage', type=click.Choice(['new', 'existing']), default=None, help='new project or existing code. Auto-detected when omitted.')
+@click.option('--planner', type=click.Choice(list(PLANNERS)), default=None, help='Planning tool. Default: speckit for new projects, openspec for existing code.')
+@click.option('--lang', type=click.Choice(['es', 'en']), default=None, help='Language for governance.yaml and guardrail messages.')
+@click.option('--agents', default='claude,antigravity', show_default=True, help='Comma-separated AI agents to protect with guard hooks.')
+@click.option('--yes', '-y', is_flag=True, help='Accept detected values without asking questions.')
+def init(dir, repo, stage, planner, lang, agents, yes):
+    """Set up governance, guardrails and templates in a project (new or existing)."""
     target_dir = Path(dir).resolve()
-    
+
     if not target_dir.exists():
         target_dir.mkdir(parents=True)
-    
+
+    interactive = not yes and sys.stdin.isatty()
+    _setup_governance(target_dir, repo, stage, planner, lang, interactive)
+    _setup_agent_guards(target_dir, agents)
+
     harness_dir = target_dir / ".harness"
     if not harness_dir.exists():
         harness_dir.mkdir(parents=True)
@@ -100,6 +120,8 @@ def init(dir):
         "credentials.json",
         "/docs/",
         ".harness/updates/",
+        ".harness/approval.json",
+        ".claude/settings.local.json",
     ]
     existing_gitignore = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
     missing_ignores = [entry for entry in mandatory_ignores if entry not in existing_gitignore]
@@ -118,6 +140,90 @@ def init(dir):
     console.print("\n[bold green]Harness initialized successfully![/bold green]")
     console.print("[bold yellow]IMPORTANT:[/bold yellow] Place any initial requirements, analysis files, or UI prototypes inside the [bold]/docs[/bold] folder.")
     console.print("You can now start editing SPECIFICATION.md, or invite your AI to begin.")
+
+
+def _detect_repository(target_dir):
+    url = _git_output(["remote", "get-url", "origin"], target_dir) or ""
+    match = re.search(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$", url)
+    return f"{match.group(1)}/{match.group(2)}" if match else ""
+
+
+_SCAFFOLD_NAMES = {".git", ".harness", "docs", ".gitignore", "README.md", "LICENSE", GOVERNANCE_FILE,
+                   ".claude", ".agents", ".gitleaks.toml"} | {f.name for f in TEMPLATE_DIR.iterdir()}
+
+
+def _detect_stage(target_dir):
+    """'existing' if the folder already has project files or git history beyond scaffolding."""
+    if _git_output(["rev-parse", "--verify", "HEAD"], target_dir):
+        return "existing"
+    return "existing" if any(p.name not in _SCAFFOLD_NAMES for p in target_dir.iterdir()) else "new"
+
+
+def _setup_governance(target_dir, repo, stage, planner, lang, interactive):
+    gov_path = target_dir / GOVERNANCE_FILE
+    if gov_path.exists():
+        console.print(f"[yellow]Skipping {GOVERNANCE_FILE} (already exists)[/yellow]")
+        return
+
+    lang = lang or (click.prompt("Idioma / Language", type=click.Choice(['es', 'en']), default='es') if interactive else 'es')
+    es = lang == 'es'
+
+    repo = repo or _detect_repository(target_dir)
+    if not repo and interactive:
+        repo = click.prompt("Repositorio de GitHub (usuario/nombre), vacío si aún no existe" if es
+                            else "GitHub repository (owner/name), empty if it does not exist yet",
+                            default="", show_default=False).strip()
+
+    detected_stage = _detect_stage(target_dir)
+    if stage is None:
+        stage = detected_stage
+        if interactive:
+            question = ("Detecté un proyecto NUEVO. ¿Es correcto?" if stage == "new" else
+                        "Detecté un proyecto con código EXISTENTE. ¿Es correcto?") if es else \
+                       (f"Detected a {'NEW project' if stage == 'new' else 'project with EXISTING code'}. Is that right?")
+            if not click.confirm(question, default=True):
+                stage = "existing" if stage == "new" else "new"
+
+    if planner is None:
+        planner = "speckit" if stage == "new" else "openspec"
+        if interactive:
+            console.print(
+                ("\nHerramienta para planificar el trabajo (recomendada: [bold]{p}[/bold])\n"
+                 "  architect = The Architect: te entrevista y escribe un plano completo (solo Claude Code)\n"
+                 "  speckit   = GitHub Spec Kit: ideal para empezar algo nuevo\n"
+                 "  openspec  = OpenSpec: ideal para cambiar código que ya existe\n"
+                 "  none      = sin herramienta externa") if es else
+                ("\nPlanning tool (recommended: [bold]{p}[/bold])\n"
+                 "  architect = The Architect: interviews you and writes a full blueprint (Claude Code only)\n"
+                 "  speckit   = GitHub Spec Kit: best for starting something new\n"
+                 "  openspec  = OpenSpec: best for changing existing code\n"
+                 "  none      = no external tool")
+                .format(p=planner))
+            planner = click.prompt("Planner", type=click.Choice(list(PLANNERS)), default=planner)
+
+    template = (GOVERNANCE_TEMPLATE_DIR / f"governance.{lang}.yaml").read_text(encoding="utf-8")
+    content = (template.replace("__REPOSITORY__", repo)
+                       .replace("__STAGE__", stage)
+                       .replace("__PLANNER__", planner))
+    gov_path.write_text(content, encoding="utf-8", newline="\n")
+    console.print(f"[bold green]Created {GOVERNANCE_FILE}[/bold green] (repo: {repo or '-'}, stage: {stage}, planner: {planner})")
+
+
+def _setup_agent_guards(target_dir, agents):
+    for agent in [a.strip() for a in agents.split(",") if a.strip()]:
+        installer = AGENT_INSTALLERS.get(agent)
+        if installer is None:
+            console.print(f"[yellow]Unknown agent '{agent}'. Supported: {', '.join(AGENT_INSTALLERS)}[/yellow]")
+            continue
+        try:
+            path = installer(target_dir)
+        except ConfigError as exc:
+            console.print(f"[red]{exc}[/red]")
+            continue
+        console.print(f"[bold green]Installed {agent} guard hook:[/bold green] {path.relative_to(target_dir)}")
+    if shutil.which("harness") is None:
+        console.print("[bold yellow]Warning:[/bold yellow] 'harness' is not on PATH, so agent guard hooks will block every action. "
+                      "Install it globally: uv tool install git+https://github.com/mporrasor/MPHarness")
 
 
 def _install_pre_commit_hook(target_dir):
@@ -480,6 +586,61 @@ def audit(dir):
     console.print("  1. AI MUST present an Upgrade Proposal Report (Package, Current, Target, Reason, Affected Files).")
     console.print("  2. User can approve or reject specific packages (pinning).")
     console.print("  3. AI updates ONLY approved packages and MUST run tests on affected modules before committing.\n")
+
+@main.command()
+@click.option('--agent', type=click.Choice(list(ADAPTERS)), required=True, help='Which AI agent is sending the hook payload.')
+def guard(agent):
+    """Agent hook entry point: reads a PreToolUse payload on stdin and answers allow / ask / deny.
+
+    Installed automatically by 'harness init'. Not meant to be run by hand.
+    """
+    to_actions, project_dir, render = ADAPTERS[agent]
+    language = "es"
+    try:
+        raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
+        payload = json.loads(raw or "{}")
+        policy = load_policy(project_dir(payload))
+        language = policy.language
+        decision = Decision()
+        for action in to_actions(payload):
+            result = evaluate(action, policy)
+            for reason in result.reasons:
+                decision.add(result.verdict, reason)
+    except Exception as exc:  # Fail closed: a guard that crashes must never let the action through.
+        decision = Decision()
+        decision.add(DENY, msg("guard_error", language, detail=type(exc).__name__))
+
+    out, code = render(decision)
+    if out:
+        sys.stdout.buffer.write(out.encode("utf-8"))
+        sys.stdout.buffer.flush()
+    sys.exit(code)
+
+
+@main.command()
+@click.option('--dir', default='.', help='Project directory.')
+@click.option('--revoke', is_flag=True, help='Remove the current approval.')
+def approve(dir, revoke):
+    """Approve the current plan so the AI may edit code (only when require_plan_approval is on).
+
+    The approval is tied to the current git branch and stays on this machine.
+    """
+    policy = load_policy(Path(dir).resolve())
+    path = policy.root / APPROVAL_FILE
+    es = policy.language == "es"
+    if revoke:
+        path.unlink(missing_ok=True)
+        console.print("[yellow]Aprobación retirada.[/yellow]" if es else "[yellow]Approval revoked.[/yellow]")
+        return
+    if not policy.rule("require_plan_approval"):
+        console.print("[yellow]require_plan_approval está desactivado en governance.yaml; la aprobación no es necesaria.[/yellow]" if es
+                      else "[yellow]require_plan_approval is off in governance.yaml; approval is not required.[/yellow]")
+    branch = current_branch(policy.root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"branch": branch, "approved_at": datetime.now(timezone.utc).isoformat()}, indent=2), encoding="utf-8")
+    console.print((f"[bold green]Plan aprobado para la rama '{branch}'.[/bold green] La IA ya puede editar código.") if es
+                  else (f"[bold green]Plan approved for branch '{branch}'.[/bold green] The AI may now edit code."))
+
 
 if __name__ == "__main__":
     main()
