@@ -13,7 +13,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1.7",
-    "rich>=13.7.0"
+    "pyyaml>=6.0",
+    "rich>=13.7.0",
 ]
 
 [project.optional-dependencies]
@@ -24,3 +25,11 @@ harness = "harness_cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+harness_cli = ["templates/*/*", "templates/*/.*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

@@ -1,0 +1,37 @@
+# ==================================================================
+#  MPHarness · Project governance rules
+#
+#  This file decides what the AI (Claude Code, Antigravity) can and
+#  cannot do in this project.
+#  To turn a rule off, change "true" to "false".
+#  After editing it, run:  harness doctor
+# ==================================================================
+version: 1
+language: en              # Message language: es | en
+
+project:
+  repository: "__REPOSITORY__"   # GitHub repository (owner/name)
+  stage: __STAGE__               # new = new project · existing = code already started
+  planner: __PLANNER__           # How work is planned:
+                                 #   architect = The Architect (Claude Code): interview + full blueprint
+                                 #   speckit   = GitHub Spec Kit: recommended for new projects
+                                 #   openspec  = OpenSpec: recommended for existing code
+                                 #   none      = no external tool
+
+branches:
+  protected: [main, master]      # Branches nobody commits to directly
+
+rules:
+  block_secrets_in_code: true        # Stops the AI from writing passwords or keys into code
+  protect_secret_files: true         # Asks before the AI reads or edits .env files, keys and certificates
+  block_commits_to_protected: true   # The AI works on branches (feat/…, fix/…), never directly on main
+  block_force_push: true             # Prevents rewriting history with "git push --force"
+  block_skipping_checks: true        # Prevents skipping checks (--no-verify, core.hooksPath)
+  ask_before_destructive: true       # Asks before mass deletes, "git reset --hard", DROP TABLE…
+  ask_before_remote_scripts: true    # Asks before running scripts from the internet (curl … | sh)
+  protect_governance_files: true     # Asks before the AI changes these rules or the workflows
+  require_plan_approval: false       # If true, the AI cannot edit code until you run "harness approve"
+
+custom:
+  blocked_commands: []    # Extra commands the AI may not run. Example:  ["docker system prune"]
+  protected_paths: []     # Extra files or folders that need your permission. Example:  ["infra/*"]
